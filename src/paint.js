@@ -19,11 +19,34 @@ function mountPaint(root, ctx) {
   function chipSVG(s) { return `<svg viewBox="0 0 100 100" aria-hidden="true">${paintShapeSVG({ ...s, cx: 50, cy: 50, size: 34, rot: s.rot })}</svg>`; }
   function draw(pop) {
     work.innerHTML = `<svg viewBox="0 0 100 100" class="pt-svg live" aria-label="Your picture" role="img">${order.map((id) => `<g class="sh${pop === id ? ' pop' : ''}" data-id="${id}">${paintShapeSVG(P.shapes[id])}</g>`).join('')}</svg>`;
-    chips.replaceChildren(...order.slice().reverse().map((id) => h('button', { class: 'pt-chip', 'aria-label': 'Layer, tap to move', html: chipSVG(P.shapes[id]), onclick: () => move(id) })));
+    chips.replaceChildren(...order.slice().reverse().map((id) => {
+      const b = h('button', { class: 'pt-chip', 'aria-label': 'Layer, drag to reorder or tap to move', html: chipSVG(P.shapes[id]) });
+      b.dataset.id = id; b.addEventListener('pointerdown', (ev) => startDrag(ev, b)); b.addEventListener('click', () => { if (b.dataset.dragged) { delete b.dataset.dragged; return; } move(id); });
+      return b;
+    }));
     const m = LD3.paintMatch(P, order, P.target); ctx.progress(Math.max(0, (m - startMatch) / Math.max(0.01, 1 - startMatch)));
     if (LD3.paintSame(P, order, P.target) && !won) { won = true; ctx.solve(); }
   }
   function move(id) { if (!ctx.active()) return; order = order.filter((x) => x !== id); if (mode === 'front') order.push(id); else order.unshift(id); draw(id); }
+  function startDrag(ev, el) {
+    if (!ctx.active()) return; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    el.classList.add('dragging');
+    const onMove = (e) => {
+      if (!el.dataset.dragged) { el.dataset.dragged = '1'; }
+      const under = document.elementFromPoint(e.clientX, e.clientY); const target = under && under.closest && under.closest('.pt-chip');
+      if (target && target !== el && target.parentNode === chips) {
+        const kids = [...chips.children]; const from = kids.indexOf(el), to = kids.indexOf(target);
+        if (from < 0 || to < 0) return;
+        if (from < to) chips.insertBefore(el, target.nextSibling); else chips.insertBefore(el, target);
+      }
+    };
+    const onUp = () => {
+      el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointercancel', onUp);
+      el.classList.remove('dragging');
+      if (el.dataset.dragged) { order = [...chips.children].map((c) => +c.dataset.id).reverse(); draw(); }
+    };
+    el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('pointercancel', onUp);
+  }
   work.addEventListener('click', (ev) => {
     if (!ctx.active()) return; const svg = work.querySelector('svg'); if (!svg) return; const r = svg.getBoundingClientRect();
     const x = (ev.clientX - r.left) / r.width * 100, y = (ev.clientY - r.top) / r.height * 100;

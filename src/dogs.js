@@ -66,23 +66,63 @@ function mountDogs(root, ctx) {
     return h('div', { class: 'clue cp dg-c', role: 'img', 'aria-label': t, title: t }, h('div', { class: 'cin' }, inner), cap(caption), h('i', { class: 'tick', 'aria-hidden': 'true' }, '\u2713'));
   }
   const cards = P.clues.map(card); const counter = h('span', { class: 'ln-count' }, '');
-  let order; do { order = LD.shuffle(ctx.r, LD.range(N)); } while (order.every((d, p) => P.sol[d] === p) || LD3.dgState(P, posOf(order)).filter(Boolean).length > total / 2);
-  function posOf(o) { const p = Array(N).fill(0); o.forEach((d, s) => { p[d] = s; }); return Int8Array.from(p); }
-  let sel = -1; let won = false;
-  const line = h('div', { class: 'dg-line', style: '--n:' + N });
-  const slots = LD.range(N).map((s) => { const b = h('button', { class: 'dgb', 'aria-label': 'Spot ' + (s + 1), onclick: () => tap(s) }); line.append(b); return b; });
-  root.append(h('div', { class: 'ln-hud' }, h('span', null, 'Rules met'), counter), h('div', { class: 'clues dg-clues' }, cards), line, h('div', { class: 'ln-note' }, 'Tap one dog, then another, to swap their spots.'));
+  let kennel = LD.shuffle(ctx.r, LD.range(N)); // dog id per kennel slot, -1 = empty
+  let lineup = Array(N).fill(-1); // dog id per final-row slot, -1 = empty
+  function posOf() { const p = Array(N).fill(-1); lineup.forEach((d, s) => { if (d >= 0) p[d] = s; }); return Int8Array.from(p); }
+  let sel = null; let won = false; let drag = null; let ghost = null; let pointerHandled = false;
+  const kennelRow = h('div', { class: 'dg-line dg-kennel', style: '--n:' + N });
+  const kennelSlots = LD.range(N).map((i) => { const b = h('button', { class: 'dgb dgk', 'aria-label': 'Kennel spot ' + (i + 1) }); b.addEventListener('pointerdown', (ev) => startDrag(ev, 'kennel', i)); b.addEventListener('click', () => { if (pointerHandled) return; tap('kennel', i); }); kennelRow.append(b); return b; });
+  const lineEl = h('div', { class: 'dg-line', style: '--n:' + N });
+  const slots = LD.range(N).map((s) => { const b = h('button', { class: 'dgb', 'aria-label': 'Spot ' + (s + 1) }); b.addEventListener('pointerdown', (ev) => startDrag(ev, 'line', s)); b.addEventListener('click', () => { if (pointerHandled) return; tap('line', s); }); lineEl.append(b); return b; });
+  root.append(h('div', { class: 'ln-hud' }, h('span', null, 'Rules met'), counter), h('div', { class: 'clues dg-clues' }, cards),
+    h('div', { class: 'dg-zone-lbl' }, 'Kennel'), kennelRow, h('div', { class: 'dg-zone-lbl' }, 'Line-up'), lineEl,
+    h('div', { class: 'ln-note' }, 'Drag a dog from the kennel into the line-up, or tap one then a spot.'));
+  function fillSlot(b, d, label) {
+    if (d < 0) b.replaceChildren(h('i', { class: 'dgi big empty', html: SIL }));
+    else b.replaceChildren(h('span', { class: 'dgi big', html: dogSVG(P.dogs[d], 54) }));
+    b.classList.toggle('empty', d < 0); b.setAttribute('aria-label', label + (d >= 0 ? ': ' + dgName(P, d) : ': empty'));
+  }
+  const clueRefs = (c) => (c.k === 'pos' || c.k === 'notpos' || c.k === 'end' || c.k === 'notend' ? [c.a] : c.k === 'between' ? [c.a, c.b, c.c] : [c.a, c.b]);
   function draw() {
-    slots.forEach((b, s) => { const d = order[s]; b.replaceChildren(h('span', { class: 'dgn' }, s + 1), h('span', { class: 'dgi big', html: dogSVG(P.dogs[d], 54) })); b.classList.toggle('sel', sel === s); b.setAttribute('aria-label', 'Spot ' + (s + 1) + ': ' + dgName(P, d)); });
-    const st = LD3.dgState(P, posOf(order)); cards.forEach((c, i) => c.classList.toggle('ok', st[i])); const ok = st.filter(Boolean).length;
+    kennelSlots.forEach((b, i) => { fillSlot(b, kennel[i], 'Kennel spot ' + (i + 1)); b.classList.toggle('sel', sel && sel.zone === 'kennel' && sel.idx === i); });
+    slots.forEach((b, s) => { fillSlot(b, lineup[s], 'Spot ' + (s + 1)); b.classList.toggle('sel', sel && sel.zone === 'line' && sel.idx === s); b.prepend(h('span', { class: 'dgn' }, s + 1)); });
+    const pos = posOf(); const raw = LD3.dgState(P, pos);
+    const st = P.clues.map((c, i) => raw[i] && clueRefs(c).every((d) => pos[d] >= 0));
+    cards.forEach((c, i) => c.classList.toggle('ok', st[i])); const ok = st.filter(Boolean).length;
     counter.textContent = ok + ' / ' + total; ctx.progress(ok / total);
-    if (ok === total && !won) { won = true; sel = -1; ctx.solve(); }
+    if (lineup.every((d) => d >= 0) && ok === total && !won) { won = true; sel = null; ctx.solve(); }
   }
-  function tap(s) {
-    if (!ctx.active()) return; if (sel < 0) sel = s; else if (sel === s) sel = -1; else { const t = order[sel]; order[sel] = order[s]; order[s] = t; sel = -1; }
-    draw();
+  function move(from, to) {
+    if (from.zone === to.zone && from.idx === to.idx) return;
+    const src = from.zone === 'kennel' ? kennel : lineup; const dst = to.zone === 'kennel' ? kennel : lineup;
+    const dog = src[from.idx]; if (dog < 0) return;
+    const occ = dst[to.idx]; dst[to.idx] = dog; src[from.idx] = occ;
   }
+  function tap(zone, idx) {
+    if (!ctx.active()) return;
+    if (!sel) { if ((zone === 'kennel' ? kennel : lineup)[idx] < 0) return; sel = { zone, idx }; draw(); return; }
+    if (sel.zone === zone && sel.idx === idx) { sel = null; draw(); return; }
+    move(sel, { zone, idx }); sel = null; draw();
+  }
+  function slotAt(x, y) { const el = document.elementFromPoint(x, y); const b = el && el.closest && el.closest('.dgb'); if (!b) return null; const inKennel = kennelSlots.indexOf(b); if (inKennel >= 0) return { zone: 'kennel', idx: inKennel }; const inLine = slots.indexOf(b); if (inLine >= 0) return { zone: 'line', idx: inLine }; return null; }
+  function startDrag(ev, zone, idx) {
+    if (!ctx.active() || ev.button === 2) return; const arr = zone === 'kennel' ? kennel : lineup; const d = arr[idx]; if (d < 0) return;
+    drag = { zone, idx, moved: false }; const el = ev.currentTarget; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    ghost = h('div', { class: 'dg-ghost', html: dogSVG(P.dogs[d], 54) }); document.body.append(ghost); placeGhost(ev.clientX, ev.clientY);
+    el.classList.add('dragsrc');
+    const move_ = (e) => { drag.moved = true; placeGhost(e.clientX, e.clientY); const hit = slotAt(e.clientX, e.clientY); [...kennelSlots, ...slots].forEach((b) => b.classList.remove('droptgt')); if (hit) (hit.zone === 'kennel' ? kennelSlots[hit.idx] : slots[hit.idx]).classList.add('droptgt'); };
+    const up = (e) => {
+      el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel);
+      el.classList.remove('dragsrc'); [...kennelSlots, ...slots].forEach((b) => b.classList.remove('droptgt')); if (ghost) { ghost.remove(); ghost = null; }
+      if (drag.moved) { const hit = slotAt(e.clientX, e.clientY); if (hit) move({ zone, idx }, hit); sel = null; draw(); }
+      else tap(zone, idx);
+      drag = null; pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0);
+    };
+    const cancel = () => { el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel); el.classList.remove('dragsrc'); [...kennelSlots, ...slots].forEach((b) => b.classList.remove('droptgt')); if (ghost) { ghost.remove(); ghost = null; } drag = null; };
+    el.addEventListener('pointermove', move_); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', cancel);
+  }
+  function placeGhost(x, y) { if (ghost) ghost.style.cssText = `left:${x}px;top:${y}px`; }
   draw();
-  const solve = () => { const o = Array(N).fill(0); P.sol.forEach((p, d) => { o[p] = d; }); order = o; sel = -1; draw(); };
-  return { destroy() {}, reveal: solve, cheat: solve, celebrate: () => { line.classList.add('won'); slots.forEach((b, i) => b.style.setProperty('--w', i * 90 + 'ms')); }, puzzle: P };
+  const solve = () => { const o = Array(N).fill(0); P.sol.forEach((p, d) => { o[p] = d; }); lineup = o; kennel = Array(N).fill(-1); sel = null; draw(); };
+  return { destroy() {}, reveal: solve, cheat: solve, celebrate: () => { lineEl.classList.add('won'); slots.forEach((b, i) => b.style.setProperty('--w', i * 90 + 'ms')); }, puzzle: P };
 }

@@ -432,8 +432,10 @@ body{overflow-x:hidden}
 .pt-stack{display:flex;align-items:center;gap:8px;margin-top:12px;justify-content:center}
 .pt-stack small{font:700 11px var(--font-b);color:var(--muted)}
 .pt-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-.pt-chip{width:44px;height:44px;border:0;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #E3D9C5,0 2px 5px rgba(60,40,10,.12);padding:5px;cursor:pointer}
+.pt-chip{width:44px;height:44px;border:0;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #E3D9C5,0 2px 5px rgba(60,40,10,.12);padding:5px;cursor:grab;touch-action:none}
+.pt-chip:active{cursor:grabbing}
 .pt-chip svg{width:100%;height:100%;display:block}
+.pt-chip.dragging{opacity:.45;transform:scale(1.1);box-shadow:0 8px 18px rgba(60,40,10,.3);z-index:5;position:relative}
 .won .pt-svg.live .sh{animation:wiggle .9s ease-in-out}
 @keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-5deg) scale(1.04)}75%{transform:rotate(5deg) scale(1.04)}}
 /* picker + home */
@@ -562,10 +564,19 @@ body{overflow-x:hidden}
 .dg-pair .dots{display:block;width:12px;height:3px;border-top:3px dotted #8B8AA2;flex:none}
 .dg-pair .gapsil{display:block;width:26px;height:26px;color:#B2AFC4;flex:none;line-height:0}
 .dg-line{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:6px;max-width:440px;margin:0 auto}
-.dgb{position:relative;border:0;padding:6px 2px 4px;border-radius:16px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1.5px rgba(60,100,70,.25);cursor:pointer;display:grid;justify-items:center;gap:0;transition:transform .2s,background .2s}
+.dgb{position:relative;border:0;padding:6px 2px 4px;border-radius:16px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1.5px rgba(60,100,70,.25);cursor:grab;display:grid;justify-items:center;gap:0;transition:transform .2s,background .2s;touch-action:none}
+.dgb:active{cursor:grabbing}
 .dgb .dgn{font:800 11px var(--font-d);color:#4a6a55;line-height:1}
 .dgb .dgi.big{width:100%;height:auto;aspect-ratio:1;max-width:58px}
+.dgb .dgi.big.empty{opacity:.3;color:#4a6a55}
+.dgb.empty{cursor:default}
 .dgb.sel{transform:translateY(-8px);background:#fff;box-shadow:0 0 0 3px #17301f,0 8px 16px rgba(0,0,0,.25)}
+.dgb.dragsrc{opacity:.35}
+.dgb.droptgt{background:rgba(14,154,167,.22);box-shadow:inset 0 0 0 2px #0E9AA7}
+.dg-zone-lbl{font:700 11px var(--font-b);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;text-align:center;margin:10px 0 6px}
+.dg-kennel{margin-bottom:4px}
+.dg-kennel .dgb{background:rgba(255,255,255,.3)}
+.dg-ghost{position:fixed;left:0;top:0;width:54px;height:54px;pointer-events:none;transform:translate(-50%,-50%) scale(1.15);z-index:999;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .dg-line.won .dgb .dgi{animation:dghop .8s ease var(--w,0ms) both}
 @keyframes dghop{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-14px) rotate(-8deg)}60%{transform:translateY(-5px) rotate(6deg)}}
 @media (prefers-reduced-motion:reduce){.dg-line.won .dgb .dgi{animation:none}}
@@ -1218,8 +1229,9 @@ function dgPerms(N) {
   (function rec() { if (cur.length === N) { out.push(...cur); return; } for (let i = 0; i < N; i++) { if (used[i]) continue; used[i] = true; cur.push(i); rec(); cur.pop(); used[i] = false; } })();
   return Int8Array.from(out);
 }
+const DOG_CLUE_COUNT = 6;
 function genDogs(r, level) {
-  const N = level >= 2 ? 6 : 5; const all = dgPerms(N); const total = all.length / N;
+  const N = 6; const all = dgPerms(N); const total = all.length / N;
   for (let attempt = 0; attempt < 2000; attempt++) {
     const dogs = shuffle(r, range(6)).slice(0, N); const sol = shuffle(r, range(N)); // sol[d] = position of dog d
     const kinds = ['notpos', 'notpos', 'adj', 'nadj', 'nadj', 'left', 'left', 'end', 'notend'].concat(level >= 2 ? ['between', 'gap1', 'gap1'] : ['pos']).concat(level >= 3 ? ['between', 'nadj'] : []);
@@ -1248,7 +1260,16 @@ function genDogs(r, level) {
     }
     if (alive.length !== 1) continue;
     for (const c of shuffle(r, clues)) { let al = Int32Array.from({ length: total }, (_, i) => i); for (const q of clues.filter((x) => x !== c)) al = filterBy(al, q); if (al.length === 1) clues.splice(clues.indexOf(c), 1); }
-    const lo = N === 6 ? 6 : 5, hi = N === 6 ? 10 : 8; if (clues.length < lo || clues.length > hi) continue;
+    if (clues.length > DOG_CLUE_COUNT) continue;
+    if (clues.length < DOG_CLUE_COUNT) {
+      let pad = 0;
+      while (clues.length < DOG_CLUE_COUNT && pad++ < 300) {
+        const c = makeClue(); if (!c) continue;
+        const key = JSON.stringify(c); if (clues.some((x) => JSON.stringify(x) === key)) continue;
+        clues.push(c);
+      }
+      if (clues.length < DOG_CLUE_COUNT) continue;
+    }
     if (new Set(clues.map((c) => JSON.stringify(c))).size !== clues.length) continue;
     return { N, dogs, sol, clues: shuffle(r, clues) };
   }
@@ -1650,25 +1671,65 @@ function mountDogs(root, ctx) {
     return h('div', { class: 'clue cp dg-c', role: 'img', 'aria-label': t, title: t }, h('div', { class: 'cin' }, inner), cap(caption), h('i', { class: 'tick', 'aria-hidden': 'true' }, '\u2713'));
   }
   const cards = P.clues.map(card); const counter = h('span', { class: 'ln-count' }, '');
-  let order; do { order = LD.shuffle(ctx.r, LD.range(N)); } while (order.every((d, p) => P.sol[d] === p) || LD3.dgState(P, posOf(order)).filter(Boolean).length > total / 2);
-  function posOf(o) { const p = Array(N).fill(0); o.forEach((d, s) => { p[d] = s; }); return Int8Array.from(p); }
-  let sel = -1; let won = false;
-  const line = h('div', { class: 'dg-line', style: '--n:' + N });
-  const slots = LD.range(N).map((s) => { const b = h('button', { class: 'dgb', 'aria-label': 'Spot ' + (s + 1), onclick: () => tap(s) }); line.append(b); return b; });
-  root.append(h('div', { class: 'ln-hud' }, h('span', null, 'Rules met'), counter), h('div', { class: 'clues dg-clues' }, cards), line, h('div', { class: 'ln-note' }, 'Tap one dog, then another, to swap their spots.'));
+  let kennel = LD.shuffle(ctx.r, LD.range(N)); // dog id per kennel slot, -1 = empty
+  let lineup = Array(N).fill(-1); // dog id per final-row slot, -1 = empty
+  function posOf() { const p = Array(N).fill(-1); lineup.forEach((d, s) => { if (d >= 0) p[d] = s; }); return Int8Array.from(p); }
+  let sel = null; let won = false; let drag = null; let ghost = null; let pointerHandled = false;
+  const kennelRow = h('div', { class: 'dg-line dg-kennel', style: '--n:' + N });
+  const kennelSlots = LD.range(N).map((i) => { const b = h('button', { class: 'dgb dgk', 'aria-label': 'Kennel spot ' + (i + 1) }); b.addEventListener('pointerdown', (ev) => startDrag(ev, 'kennel', i)); b.addEventListener('click', () => { if (pointerHandled) return; tap('kennel', i); }); kennelRow.append(b); return b; });
+  const lineEl = h('div', { class: 'dg-line', style: '--n:' + N });
+  const slots = LD.range(N).map((s) => { const b = h('button', { class: 'dgb', 'aria-label': 'Spot ' + (s + 1) }); b.addEventListener('pointerdown', (ev) => startDrag(ev, 'line', s)); b.addEventListener('click', () => { if (pointerHandled) return; tap('line', s); }); lineEl.append(b); return b; });
+  root.append(h('div', { class: 'ln-hud' }, h('span', null, 'Rules met'), counter), h('div', { class: 'clues dg-clues' }, cards),
+    h('div', { class: 'dg-zone-lbl' }, 'Kennel'), kennelRow, h('div', { class: 'dg-zone-lbl' }, 'Line-up'), lineEl,
+    h('div', { class: 'ln-note' }, 'Drag a dog from the kennel into the line-up, or tap one then a spot.'));
+  function fillSlot(b, d, label) {
+    if (d < 0) b.replaceChildren(h('i', { class: 'dgi big empty', html: SIL }));
+    else b.replaceChildren(h('span', { class: 'dgi big', html: dogSVG(P.dogs[d], 54) }));
+    b.classList.toggle('empty', d < 0); b.setAttribute('aria-label', label + (d >= 0 ? ': ' + dgName(P, d) : ': empty'));
+  }
+  const clueRefs = (c) => (c.k === 'pos' || c.k === 'notpos' || c.k === 'end' || c.k === 'notend' ? [c.a] : c.k === 'between' ? [c.a, c.b, c.c] : [c.a, c.b]);
   function draw() {
-    slots.forEach((b, s) => { const d = order[s]; b.replaceChildren(h('span', { class: 'dgn' }, s + 1), h('span', { class: 'dgi big', html: dogSVG(P.dogs[d], 54) })); b.classList.toggle('sel', sel === s); b.setAttribute('aria-label', 'Spot ' + (s + 1) + ': ' + dgName(P, d)); });
-    const st = LD3.dgState(P, posOf(order)); cards.forEach((c, i) => c.classList.toggle('ok', st[i])); const ok = st.filter(Boolean).length;
+    kennelSlots.forEach((b, i) => { fillSlot(b, kennel[i], 'Kennel spot ' + (i + 1)); b.classList.toggle('sel', sel && sel.zone === 'kennel' && sel.idx === i); });
+    slots.forEach((b, s) => { fillSlot(b, lineup[s], 'Spot ' + (s + 1)); b.classList.toggle('sel', sel && sel.zone === 'line' && sel.idx === s); b.prepend(h('span', { class: 'dgn' }, s + 1)); });
+    const pos = posOf(); const raw = LD3.dgState(P, pos);
+    const st = P.clues.map((c, i) => raw[i] && clueRefs(c).every((d) => pos[d] >= 0));
+    cards.forEach((c, i) => c.classList.toggle('ok', st[i])); const ok = st.filter(Boolean).length;
     counter.textContent = ok + ' / ' + total; ctx.progress(ok / total);
-    if (ok === total && !won) { won = true; sel = -1; ctx.solve(); }
+    if (lineup.every((d) => d >= 0) && ok === total && !won) { won = true; sel = null; ctx.solve(); }
   }
-  function tap(s) {
-    if (!ctx.active()) return; if (sel < 0) sel = s; else if (sel === s) sel = -1; else { const t = order[sel]; order[sel] = order[s]; order[s] = t; sel = -1; }
-    draw();
+  function move(from, to) {
+    if (from.zone === to.zone && from.idx === to.idx) return;
+    const src = from.zone === 'kennel' ? kennel : lineup; const dst = to.zone === 'kennel' ? kennel : lineup;
+    const dog = src[from.idx]; if (dog < 0) return;
+    const occ = dst[to.idx]; dst[to.idx] = dog; src[from.idx] = occ;
   }
+  function tap(zone, idx) {
+    if (!ctx.active()) return;
+    if (!sel) { if ((zone === 'kennel' ? kennel : lineup)[idx] < 0) return; sel = { zone, idx }; draw(); return; }
+    if (sel.zone === zone && sel.idx === idx) { sel = null; draw(); return; }
+    move(sel, { zone, idx }); sel = null; draw();
+  }
+  function slotAt(x, y) { const el = document.elementFromPoint(x, y); const b = el && el.closest && el.closest('.dgb'); if (!b) return null; const inKennel = kennelSlots.indexOf(b); if (inKennel >= 0) return { zone: 'kennel', idx: inKennel }; const inLine = slots.indexOf(b); if (inLine >= 0) return { zone: 'line', idx: inLine }; return null; }
+  function startDrag(ev, zone, idx) {
+    if (!ctx.active() || ev.button === 2) return; const arr = zone === 'kennel' ? kennel : lineup; const d = arr[idx]; if (d < 0) return;
+    drag = { zone, idx, moved: false }; const el = ev.currentTarget; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    ghost = h('div', { class: 'dg-ghost', html: dogSVG(P.dogs[d], 54) }); document.body.append(ghost); placeGhost(ev.clientX, ev.clientY);
+    el.classList.add('dragsrc');
+    const move_ = (e) => { drag.moved = true; placeGhost(e.clientX, e.clientY); const hit = slotAt(e.clientX, e.clientY); [...kennelSlots, ...slots].forEach((b) => b.classList.remove('droptgt')); if (hit) (hit.zone === 'kennel' ? kennelSlots[hit.idx] : slots[hit.idx]).classList.add('droptgt'); };
+    const up = (e) => {
+      el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel);
+      el.classList.remove('dragsrc'); [...kennelSlots, ...slots].forEach((b) => b.classList.remove('droptgt')); if (ghost) { ghost.remove(); ghost = null; }
+      if (drag.moved) { const hit = slotAt(e.clientX, e.clientY); if (hit) move({ zone, idx }, hit); sel = null; draw(); }
+      else tap(zone, idx);
+      drag = null; pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0);
+    };
+    const cancel = () => { el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel); el.classList.remove('dragsrc'); [...kennelSlots, ...slots].forEach((b) => b.classList.remove('droptgt')); if (ghost) { ghost.remove(); ghost = null; } drag = null; };
+    el.addEventListener('pointermove', move_); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', cancel);
+  }
+  function placeGhost(x, y) { if (ghost) ghost.style.cssText = `left:${x}px;top:${y}px`; }
   draw();
-  const solve = () => { const o = Array(N).fill(0); P.sol.forEach((p, d) => { o[p] = d; }); order = o; sel = -1; draw(); };
-  return { destroy() {}, reveal: solve, cheat: solve, celebrate: () => { line.classList.add('won'); slots.forEach((b, i) => b.style.setProperty('--w', i * 90 + 'ms')); }, puzzle: P };
+  const solve = () => { const o = Array(N).fill(0); P.sol.forEach((p, d) => { o[p] = d; }); lineup = o; kennel = Array(N).fill(-1); sel = null; draw(); };
+  return { destroy() {}, reveal: solve, cheat: solve, celebrate: () => { lineEl.classList.add('won'); slots.forEach((b, i) => b.style.setProperty('--w', i * 90 + 'ms')); }, puzzle: P };
 }
 'use strict';
 /* ---------- Suspect lineup: rule out everyone who breaks a clue ---------- */
@@ -1812,11 +1873,34 @@ function mountPaint(root, ctx) {
   function chipSVG(s) { return `<svg viewBox="0 0 100 100" aria-hidden="true">${paintShapeSVG({ ...s, cx: 50, cy: 50, size: 34, rot: s.rot })}</svg>`; }
   function draw(pop) {
     work.innerHTML = `<svg viewBox="0 0 100 100" class="pt-svg live" aria-label="Your picture" role="img">${order.map((id) => `<g class="sh${pop === id ? ' pop' : ''}" data-id="${id}">${paintShapeSVG(P.shapes[id])}</g>`).join('')}</svg>`;
-    chips.replaceChildren(...order.slice().reverse().map((id) => h('button', { class: 'pt-chip', 'aria-label': 'Layer, tap to move', html: chipSVG(P.shapes[id]), onclick: () => move(id) })));
+    chips.replaceChildren(...order.slice().reverse().map((id) => {
+      const b = h('button', { class: 'pt-chip', 'aria-label': 'Layer, drag to reorder or tap to move', html: chipSVG(P.shapes[id]) });
+      b.dataset.id = id; b.addEventListener('pointerdown', (ev) => startDrag(ev, b)); b.addEventListener('click', () => { if (b.dataset.dragged) { delete b.dataset.dragged; return; } move(id); });
+      return b;
+    }));
     const m = LD3.paintMatch(P, order, P.target); ctx.progress(Math.max(0, (m - startMatch) / Math.max(0.01, 1 - startMatch)));
     if (LD3.paintSame(P, order, P.target) && !won) { won = true; ctx.solve(); }
   }
   function move(id) { if (!ctx.active()) return; order = order.filter((x) => x !== id); if (mode === 'front') order.push(id); else order.unshift(id); draw(id); }
+  function startDrag(ev, el) {
+    if (!ctx.active()) return; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    el.classList.add('dragging');
+    const onMove = (e) => {
+      if (!el.dataset.dragged) { el.dataset.dragged = '1'; }
+      const under = document.elementFromPoint(e.clientX, e.clientY); const target = under && under.closest && under.closest('.pt-chip');
+      if (target && target !== el && target.parentNode === chips) {
+        const kids = [...chips.children]; const from = kids.indexOf(el), to = kids.indexOf(target);
+        if (from < 0 || to < 0) return;
+        if (from < to) chips.insertBefore(el, target.nextSibling); else chips.insertBefore(el, target);
+      }
+    };
+    const onUp = () => {
+      el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointercancel', onUp);
+      el.classList.remove('dragging');
+      if (el.dataset.dragged) { order = [...chips.children].map((c) => +c.dataset.id).reverse(); draw(); }
+    };
+    el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('pointercancel', onUp);
+  }
   work.addEventListener('click', (ev) => {
     if (!ctx.active()) return; const svg = work.querySelector('svg'); if (!svg) return; const r = svg.getBoundingClientRect();
     const x = (ev.clientX - r.left) / r.width * 100, y = (ev.clientY - r.top) / r.height * 100;
@@ -1851,7 +1935,7 @@ const GAMES = {
   jungle: { name: 'Jungle', em: '\u{1F42F}', tc: '#E39A2D', blurb: 'Place animals by the clues', how: 'Tap an animal, then a tile. White rings show where, a red \u2715 means not. Make every clue true.', mount: mountJungle, levels: [2, 3, 3], gen: (r, l) => LD.genPuzzle(r, l) },
   alibi: { name: 'Alibi', em: '\u{1F50E}', tc: '#7A4FD0', blurb: 'Who was at the party, and when?', how: 'Tap an hour in a guest\u2019s row to set when they arrived. The bar shows how long they stayed. Make every clue true.', mount: mountAlibi, levels: [3, 4, 4, 5], gen: (r, l) => LD2.genAlibi(r, l) },
   bridge: { name: 'Bridges', em: '\u{1F309}', tc: '#0E9AA7', blurb: 'Lay one bridge over every tile', how: 'Drag from island 1 to lay a single bridge that covers every tile and visits the islands in number order. Drag backward to undo.', mount: mountBridge, levels: [1, 2, 2, 3], gen: (r, l) => LD3.genZip(r, l) },
-  dogs: { name: 'Pup Parade', em: '\u{1F436}', tc: '#E39A2D', blurb: 'Line the dogs up by the rules', how: 'Tap two dogs to swap their spots. Rearrange the line until every rule card is met. Green ticks show the rules you have satisfied.', mount: mountDogs, levels: [1, 2, 2, 3], gen: (r, l) => LD3.genDogs(r, l) },
+  dogs: { name: 'Pup Parade', em: '\u{1F436}', tc: '#E39A2D', blurb: 'Line the dogs up by the rules', how: 'Drag a dog from the kennel into a line-up spot, or tap one then a spot. Rearrange until every rule card is met. Green ticks show the rules you have satisfied.', mount: mountDogs, levels: [1, 2, 2, 3], gen: (r, l) => LD3.genDogs(r, l) },
   lineup: { name: 'Lineup', em: '\u{1F575}\uFE0F', tc: '#3A6FD8', blurb: 'Find the culprit from tricky clues', how: 'Use the clues to rule faces out, or switch to Accuse and name your suspect straight away. When only one face is left, accuse them. A wrong accusation costs 8 seconds.', mount: mountLineup, levels: [2, 3, 3], gen: (r, l) => LD3.genLineup(r, l) },
   untangle: { name: 'Untangle', em: '\u{1F578}\uFE0F', tc: '#7A5CF0', blurb: 'Drag nodes until no lines cross', how: 'Drag the glowing nodes around. Red lines are still crossing. Untangle them all.', mount: mountUntangle, levels: [2, 2, 3], gen: (r, l) => LD3.genUntangle(r, l) },
   paint: { name: 'Layers', em: '\u{1F3A8}', tc: '#FF5A5F', blurb: 'Restack the paper to match', how: 'Tap a shape to bring it to the front, or switch to Send to back. Restack the layers until your picture matches the target.', mount: mountPaint, levels: [1, 2, 2, 3], gen: (r, l) => LD3.paintPrep(LD3.genPaint(r, l)) },

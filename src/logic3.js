@@ -264,8 +264,9 @@ function dgPerms(N) {
   (function rec() { if (cur.length === N) { out.push(...cur); return; } for (let i = 0; i < N; i++) { if (used[i]) continue; used[i] = true; cur.push(i); rec(); cur.pop(); used[i] = false; } })();
   return Int8Array.from(out);
 }
+const DOG_CLUE_COUNT = 6;
 function genDogs(r, level) {
-  const N = level >= 2 ? 6 : 5; const all = dgPerms(N); const total = all.length / N;
+  const N = 6; const all = dgPerms(N); const total = all.length / N;
   for (let attempt = 0; attempt < 2000; attempt++) {
     const dogs = shuffle(r, range(6)).slice(0, N); const sol = shuffle(r, range(N)); // sol[d] = position of dog d
     const kinds = ['notpos', 'notpos', 'adj', 'nadj', 'nadj', 'left', 'left', 'end', 'notend'].concat(level >= 2 ? ['between', 'gap1', 'gap1'] : ['pos']).concat(level >= 3 ? ['between', 'nadj'] : []);
@@ -294,7 +295,16 @@ function genDogs(r, level) {
     }
     if (alive.length !== 1) continue;
     for (const c of shuffle(r, clues)) { let al = Int32Array.from({ length: total }, (_, i) => i); for (const q of clues.filter((x) => x !== c)) al = filterBy(al, q); if (al.length === 1) clues.splice(clues.indexOf(c), 1); }
-    const lo = N === 6 ? 6 : 5, hi = N === 6 ? 10 : 8; if (clues.length < lo || clues.length > hi) continue;
+    if (clues.length > DOG_CLUE_COUNT) continue;
+    if (clues.length < DOG_CLUE_COUNT) {
+      let pad = 0;
+      while (clues.length < DOG_CLUE_COUNT && pad++ < 300) {
+        const c = makeClue(); if (!c) continue;
+        const key = JSON.stringify(c); if (clues.some((x) => JSON.stringify(x) === key)) continue;
+        clues.push(c);
+      }
+      if (clues.length < DOG_CLUE_COUNT) continue;
+    }
     if (new Set(clues.map((c) => JSON.stringify(c))).size !== clues.length) continue;
     return { N, dogs, sol, clues: shuffle(r, clues) };
   }
