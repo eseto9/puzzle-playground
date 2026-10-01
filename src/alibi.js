@@ -74,5 +74,6 @@ function mountAlibi(root, ctx) {
     st[a] = st[a] === s ? -1 : s; draw();
   }
   draw();
-  return { destroy() {}, reveal: () => { P.sol.forEach((s, a) => { st[a] = s; }); draw(); }, cheat: () => { P.sol.forEach((s, a) => { st[a] = s; }); draw(); }, celebrate: () => board.classList.add('won'), puzzle: P };
+  return { destroy() {}, reveal: () => { P.sol.forEach((s, a) => { st[a] = s; }); draw(); }, cheat: () => { P.sol.forEach((s, a) => { st[a] = s; }); draw(); }, celebrate: () => board.classList.add('won'), puzzle: P,
+    snapshot: () => st.slice(), applySnapshot: (s) => { if (Array.isArray(s)) { for (let i = 0; i < st.length; i++) st[i] = s[i] != null ? s[i] : -1; draw(); } } };
 }

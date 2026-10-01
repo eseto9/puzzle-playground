@@ -53,5 +53,6 @@ function mountPaint(root, ctx) {
     for (let k = order.length - 1; k >= 0; k--) { if (LD3.inShape(P.shapes[order[k]], x, y)) { move(order[k]); return; } }
   });
   draw();
-  return { destroy() {}, reveal: () => { order = P.target.slice(); draw(); }, cheat: () => { order = P.target.slice(); draw(); }, celebrate: () => root.classList.add('won'), puzzle: P };
+  return { destroy() {}, reveal: () => { order = P.target.slice(); draw(); }, cheat: () => { order = P.target.slice(); draw(); }, celebrate: () => root.classList.add('won'), puzzle: P,
+    snapshot: () => order.slice(), applySnapshot: (s) => { if (Array.isArray(s)) { order = s.slice(); draw(); } } };
 }

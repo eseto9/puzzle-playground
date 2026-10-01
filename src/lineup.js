@@ -92,5 +92,6 @@ function mountLineup(root, ctx) {
   }
   draw();
   const reveal = () => { LD.range(N).forEach((q) => { if (q !== P.culprit) out.add(q); }); draw(); grid.classList.add('won'); tiles[P.culprit].classList.add('caught'); };
-  return { destroy() {}, reveal, cheat: () => { reveal(); won = true; ctx.solve(); }, celebrate: () => { grid.classList.add('won'); tiles[P.culprit].classList.add('caught'); }, puzzle: P };
+  return { destroy() {}, reveal, cheat: () => { reveal(); won = true; ctx.solve(); }, celebrate: () => { grid.classList.add('won'); tiles[P.culprit].classList.add('caught'); }, puzzle: P,
+    snapshot: () => [...out], applySnapshot: (s) => { if (Array.isArray(s)) { out.clear(); s.forEach((i) => out.add(i)); draw(); } } };
 }

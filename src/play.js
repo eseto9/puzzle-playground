@@ -55,7 +55,7 @@ function playScreen(o) {
   const overlay = (inner) => { const ov = h('div', { class: 'overlay' }, inner); sw.append(ov); return ov; };
   const ctx = {
     r: LD.makeRng('run|' + seed), level: levelFor(o.gameId, seed), puzzle: () => puzzleFor(o.gameId, seed), active: () => running && !done,
-    progress(p) { if (o.onProgress) o.onProgress(Math.max(0, Math.min(1, p))); },
+    progress(p) { if (o.onProgress) o.onProgress(Math.max(0, Math.min(1, p)), game && game.snapshot ? game.snapshot() : null); },
     penalty(sec) { if (done) return; t0 -= sec * 1000; penalty += sec; pen.textContent = '+' + penalty + 's'; pen.classList.remove('hide'); },
     solve() {
       if (done) return; done = true; const t = elapsed(); running = false; timers.forEach(clearInterval);

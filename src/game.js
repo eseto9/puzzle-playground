@@ -151,7 +151,8 @@ function mountJungle(root, ctx) {
     sel = null; draw();
   }
   draw();
-  return { destroy() {}, reveal: () => { sol.forEach((c, a) => { placed[a] = c; }); sel = null; draw(); }, cheat: () => { sol.forEach((c, a) => { placed[a] = c; }); sel = null; draw(); }, celebrate: () => jgridEl.classList.add('won'), puzzle: { P, clues, sol } };
+  return { destroy() {}, reveal: () => { sol.forEach((c, a) => { placed[a] = c; }); sel = null; draw(); }, cheat: () => { sol.forEach((c, a) => { placed[a] = c; }); sel = null; draw(); }, celebrate: () => jgridEl.classList.add('won'), puzzle: { P, clues, sol },
+    snapshot: () => placed.slice(), applySnapshot: (s) => { if (Array.isArray(s)) { for (let i = 0; i < placed.length; i++) placed[i] = s[i] != null ? s[i] : -1; sel = null; draw(); } } };
 }
 
 /* ---------- textures & shared svg defs ---------- */

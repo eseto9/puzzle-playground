@@ -124,5 +124,6 @@ function mountDogs(root, ctx) {
   function placeGhost(x, y) { if (ghost) ghost.style.cssText = `left:${x}px;top:${y}px`; }
   draw();
   const solve = () => { const o = Array(N).fill(0); P.sol.forEach((p, d) => { o[p] = d; }); lineup = o; kennel = Array(N).fill(-1); sel = null; draw(); };
-  return { destroy() {}, reveal: solve, cheat: solve, celebrate: () => { lineEl.classList.add('won'); slots.forEach((b, i) => b.style.setProperty('--w', i * 90 + 'ms')); }, puzzle: P };
+  return { destroy() {}, reveal: solve, cheat: solve, celebrate: () => { lineEl.classList.add('won'); slots.forEach((b, i) => b.style.setProperty('--w', i * 90 + 'ms')); }, puzzle: P,
+    snapshot: () => ({ kennel: kennel.slice(), lineup: lineup.slice() }), applySnapshot: (s) => { if (s && Array.isArray(s.kennel) && Array.isArray(s.lineup)) { kennel = s.kennel.slice(); lineup = s.lineup.slice(); sel = null; draw(); } } };
 }

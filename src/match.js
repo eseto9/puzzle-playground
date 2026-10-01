@@ -1,5 +1,7 @@
 'use strict';
-/* ---------- Friend race: three puzzles, first to finish all three wins; rated with Elo ---------- */
+/* ---------- Friend race: five puzzles, fastest total time wins; rated with Elo.
+   If you finish first, you watch a live read-only mirror of your friend's
+   board until they finish too (or quit). ---------- */
 const PICKS = 5;
 const validPicks = (a) => Array.isArray(a) && a.length === PICKS && a.every((g) => typeof g === 'string' && GAMES[g]);
 const GIVEUP_PENALTY = 60;
@@ -20,15 +22,21 @@ function raceHud(games, oppName) {
 }
 function runRace(cfg) {
   const room = cfg.room; const oppName = cfg.oppName || 'Friend'; const games = cfg.set.slice(); const nP = games.length; const pseed = (i) => cfg.seed + '-' + i;
-  const S = { times: [], gave: [], oppTimes: [], oppGave: [], myDone: null, oppDone: null, over: false, t0: 0, lastEmit: 0, celebUntil: 0, penalty: 0, e0: App.rec.elo.r, oppE: null };
-  let ctl = null, leftTimer = null, graceT = null; const unsubs = [];
+  const S = { times: [], gave: [], oppTimes: [], oppGave: [], myDone: null, oppDone: null, over: false, t0: 0, lastEmit: 0, celebUntil: 0, penalty: 0, e0: App.rec.elo.r, oppE: null, oppI: 0, oppSnap: null, spectating: false };
+  let ctl = null, leftTimer = null, graceT = null; const unsubs = []; let spec = null, specStage = null, specSub = null;
   const hud = raceHud(games, oppName); App.screen = 'match';
   const emit = (d) => { room.emit('h2h', Object.assign({ m: cfg.seed, e: S.e0 }, d)).catch(() => {}); };
   hud.setMe(0, 0, []); hud.setOpp(0, 0, []);
   unsubs.push(room.on('h2h', (msg) => {
     if (msg.sameTab) return; const d = msg.data || {}; if (d.m !== cfg.seed || S.over) return;
     if (typeof d.e === 'number' && S.oppE == null) S.oppE = d.e;
-    if (d.t === 'prog') { S.oppTimes = Array.isArray(d.times) ? d.times.slice(0, nP) : []; S.oppGave = Array.isArray(d.gave) ? d.gave.slice(0, nP) : []; hud.setOpp(Math.max(0, Math.min(nP - 1, d.i | 0)), +d.p || 0, S.oppTimes, false, S.oppGave); }
+    if (d.t === 'prog') {
+      S.oppTimes = Array.isArray(d.times) ? d.times.slice(0, nP) : []; S.oppGave = Array.isArray(d.gave) ? d.gave.slice(0, nP) : [];
+      const newI = Math.max(0, Math.min(nP - 1, d.i | 0)); if (newI !== S.oppI) S.oppSnap = null; S.oppI = newI;
+      if (d.snap !== undefined) S.oppSnap = d.snap;
+      hud.setOpp(S.oppI, +d.p || 0, S.oppTimes, false, S.oppGave);
+      if (S.spectating) renderSpectate();
+    }
     else if (d.t === 'done') onOppDone(d.tm, d.times, d.gave);
     else if (d.t === 'quit') end(true, 'Your friend left the race.');
   }));
@@ -40,7 +48,7 @@ function runRace(cfg) {
     const gid = games[i];
     ctl = playScreen({ gameId: gid, seed: pseed(i), countdown: i === 0, fast: true, hud: hud.el, giveUpNote: 'You will get +60 seconds.', title: 'Puzzle ' + (i + 1) + ' of ' + nP, sub: GAMES[gid].name,
       onGo: () => { if (i === 0) S.t0 = performance.now(); },
-      onProgress: (p) => { if (p >= 1) return; hud.setMe(i, p, S.times, false, S.gave); const now = performance.now(); if (now - S.lastEmit > 500) { S.lastEmit = now; emit({ t: 'prog', i, p, times: S.times, gave: S.gave }); } },
+      onProgress: (p, snap) => { if (p >= 1) return; hud.setMe(i, p, S.times, false, S.gave); const now = performance.now(); if (now - S.lastEmit > 500) { S.lastEmit = now; emit({ t: 'prog', i, p, times: S.times, gave: S.gave, snap }); } },
       onSolveNow: (res) => { finish(i, res.time, res.at, false); if (i < nP - 1) setTimeout(() => { try { puzzleFor(games[i + 1], pseed(i + 1)); } catch (e) { /* on demand */ } }, 300); },
       onSolved: () => { if (i < nP - 1 && !S.over) ctl.prompt('Solved in ' + fmt(S.times[i]), 'Next: ' + GAMES[games[i + 1]].name, 'Next puzzle \u2192', () => startPuzzle(i + 1)); },
       onGiveUp: (res) => { finish(i, res.time, performance.now(), true); if (i < nP - 1 && !S.over) ctl.prompt('Answer shown (+60s)', 'Next: ' + GAMES[games[i + 1]].name, 'Next puzzle \u2192', () => startPuzzle(i + 1)); },
@@ -52,17 +60,36 @@ function runRace(cfg) {
     else {
       const total = Math.round(at - S.t0) / 1000 + S.penalty; S.myDone = { tm: total };
       hud.setMe(nP - 1, 1, S.times, true, S.gave); ctl.freeze(); emit({ t: 'done', tm: total, times: S.times, gave: S.gave });
-      graceT = setTimeout(() => { if (!S.over) end(S.oppDone ? cmp() === 'me' : true); }, 1300);
+      graceT = setTimeout(() => { if (S.over) return; if (S.oppDone) end(cmp() === 'me'); else startSpectate(); }, 1300);
     }
   }
   const cmp = () => { const a = S.myDone.tm, b = S.oppDone.tm; return a < b ? 'me' : a > b ? 'opp' : (cfg.host ? 'me' : 'opp'); };
   function onOppDone(tm, times, gave) {
     if (S.over) return; S.oppDone = { tm: +tm || 0 }; if (Array.isArray(times)) S.oppTimes = times.slice(0, nP); if (Array.isArray(gave)) S.oppGave = gave.slice(0, nP); hud.setOpp(nP - 1, 1, S.oppTimes, true, S.oppGave);
-    if (S.myDone) end(cmp() === 'me'); else { if (ctl) ctl.freeze(); end(false); }
+    if (S.myDone) end(cmp() === 'me');
+  }
+  function teardownSpectate() { if (spec && spec.ctl) { try { spec.ctl.destroy(); } catch (e) { /* noop */ } } spec = null; }
+  function renderSpectate() {
+    if (!S.spectating || S.over || !specStage) return;
+    const gid = games[S.oppI]; const seed = pseed(S.oppI);
+    if (!spec || spec.gid !== gid || spec.seed !== seed) {
+      teardownSpectate(); const root = h('div', { class: 'stage th-' + gid }); specStage.replaceChildren(root);
+      const sctx = { r: LD.makeRng('spec|' + seed), level: levelFor(gid, seed), puzzle: () => puzzleFor(gid, seed), active: () => false, progress() {}, penalty() {}, solve() {} };
+      spec = { gid, seed, ctl: GAMES[gid].mount(root, sctx) }; if (specSub) specSub.textContent = 'Puzzle ' + (S.oppI + 1) + ' of ' + nP + ' \u00b7 ' + GAMES[gid].name;
+    }
+    if (spec.ctl.applySnapshot && S.oppSnap) spec.ctl.applySnapshot(S.oppSnap);
+  }
+  function startSpectate() {
+    if (S.over || S.oppDone || S.spectating) return; S.spectating = true; App.screen = 'match';
+    specSub = h('span', { class: 'sub' }, '');
+    const top = h('div', { class: 'topbar' }, h('button', { class: 'icon-btn', 'aria-label': 'Leave race', onclick: () => confirmQuit(() => { emit({ t: 'quit' }); end(false, 'You left the race.', true); }) }, '\u2190'), h('div', { class: 'ttl' }, 'Watching ' + oppName, specSub));
+    specStage = h('div', { class: 'stagewrap' });
+    view(h('div', { class: 'wrap' }, top, hud.el, h('p', { class: 'how' }, 'You finished! ' + oppName + ' is still racing \u2014 this updates live as they play.'), specStage));
+    renderSpectate();
   }
   function end(won, why, left) {
     if (S.over) return; const wait = left ? 0 : S.celebUntil - performance.now(); if (wait > 50) { if (!S.pending) { S.pending = true; setTimeout(() => { S.pending = false; end(won, why, left); }, wait); } return; }
-    S.over = true; clearTimeout(leftTimer); clearTimeout(graceT); unsubs.forEach((u) => { try { u(); } catch (e) { /* noop */ } });
+    S.over = true; clearTimeout(leftTimer); clearTimeout(graceT); unsubs.forEach((u) => { try { u(); } catch (e) { /* noop */ } }); teardownSpectate();
     try { room.leave(); } catch (e) { /* noop */ }
     const rating = eloApply(S.oppE == null ? 1200 : S.oppE, won ? 1 : 0); const delta = rating.now - rating.old;
     const t = (v, g) => (v != null ? (g ? 'gave up' : fmt(v)) : '\u2014');

@@ -21,5 +21,6 @@ function mountUntangle(root, ctx) {
   const up = () => { if (drag >= 0) nEls[drag].classList.remove('drag'); drag = -1; };
   svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
   update();
-  return { destroy() {}, reveal: () => { P.solution.forEach((p, i) => { pos[i] = p.slice(); }); update(); }, cheat: () => { P.solution.forEach((p, i) => { pos[i] = p.slice(); }); update(); }, celebrate: () => svg.classList.add('won'), puzzle: P };
+  return { destroy() {}, reveal: () => { P.solution.forEach((p, i) => { pos[i] = p.slice(); }); update(); }, cheat: () => { P.solution.forEach((p, i) => { pos[i] = p.slice(); }); update(); }, celebrate: () => svg.classList.add('won'), puzzle: P,
+    snapshot: () => pos.map((p) => p.slice()), applySnapshot: (s) => { if (Array.isArray(s)) { s.forEach((p, i) => { if (pos[i] && Array.isArray(p)) pos[i] = p.slice(); }); update(); } } };
 }

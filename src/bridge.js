@@ -68,6 +68,7 @@ function mountBridge(root, ctx) {
   draw();
   const setPath = (p) => { path = p.slice(); draw(); };
   return { destroy() {}, reveal: () => setPath(P.path), cheat: () => setPath(P.path),
+    snapshot: () => path.slice(), applySnapshot: (s) => { if (Array.isArray(s)) setPath(s); },
     celebrate: () => {
       svg.classList.add('won'); const NS = 'http://www.w3.org/2000/svg'; const d = 'M' + path.map((c) => ctr(c).join(' ')).join('L');
       const gEl = document.createElementNS(NS, 'g'); const t = document.createElementNS(NS, 'text'); t.setAttribute('class', 'zp-walker'); t.textContent = '\u{1F6B6}';

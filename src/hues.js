@@ -16,5 +16,6 @@ function mountHues(root, ctx) {
   }
   layout(); stats();
   const solveAll = () => { LD.range(N).forEach((p) => { arr[p] = p; }); sel = -1; layout(); stats(); };
-  return { destroy() {}, reveal: solveAll, cheat: solveAll, celebrate: () => { board.classList.add('won'); tiles.forEach((t, id) => t.style.setProperty('--w', ((id % cols) + ((id / cols) | 0)) * 70 + 'ms')); }, puzzle: P };
+  return { destroy() {}, reveal: solveAll, cheat: solveAll, celebrate: () => { board.classList.add('won'); tiles.forEach((t, id) => t.style.setProperty('--w', ((id % cols) + ((id / cols) | 0)) * 70 + 'ms')); }, puzzle: P,
+    snapshot: () => arr.slice(), applySnapshot: (s) => { if (Array.isArray(s)) { arr = s.slice(); sel = -1; layout(); stats(); } } };
 }
