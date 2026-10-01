@@ -1,0 +1,8 @@
+{
+  "name": "wits-end",
+  "version": "1.0.0",
+  "description": "Eight bite-sized logic puzzles you can race a friend on. Keep going until you reach your wits' end.",
+  "scripts": { "build": "./build.sh", "test": "node tests/generators.test.js" },
+  "license": "MIT",
+  "private": true
+}
