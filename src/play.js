@@ -11,6 +11,17 @@ function dialog(msg, ok, cancel) {
   });
 }
 const confirmQuit = (fn) => dialog('Leave this puzzle? Your time will be lost.', 'Leave', 'Keep playing').then((v) => { if (v) fn(); });
+function promptName(current) {
+  return new Promise((res) => {
+    const inp = h('input', { class: 'field', placeholder: 'Your name', maxlength: 18, autocomplete: 'off', value: current || '' });
+    const close = (v) => { m.remove(); res(v); };
+    const m = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' }, h('div', { class: 'box' },
+      h('p', null, 'Add your name so others can see it on the board.'), inp,
+      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: () => close(null) }, 'Skip'), h('button', { class: 'btn', onclick: () => close(inp.value.trim().slice(0, 18)) }, 'Save'))));
+    document.body.append(m); setTimeout(() => inp.focus(), 50);
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') close(inp.value.trim().slice(0, 18)); });
+  });
+}
 const reduceMotion = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
 
 /* ---------- completion celebration ---------- */
@@ -93,8 +104,14 @@ function startDaily() {
   playScreen({ gameId: gid, seed, title: 'Today\u2019s puzzle', sub: GAMES[gid].name + ' \u00B7 ' + date, onQuit: () => home(),
     onGiveUp: () => view(h('div', { class: 'wrap' }, h('div', { class: 'card result' }, h('div', { class: 'muted' }, GAMES[gid].name), h('h1', null, 'Answer revealed'), h('p', { class: 'muted small' }, 'No time posted. Solve it fully to get on today\u2019s board.'), h('div', { class: 'stack' }, h('button', { class: 'btn you block', onclick: () => startDaily() }, 'Try again'), h('button', { class: 'btn ghost block', onclick: () => startRandom(gid) }, 'Play another ' + GAMES[gid].name), homeBtn())))),
     onSolved: (res) => {
-      const ranked = !App.rec.daily[date];
-      if (ranked) { App.rec.daily[date] = { s: res.time, at: Date.now(), g: gid }; saveRec(); }
+      const ranked = !App.rec.daily[date]; const shared = App.db && App.uid !== 'local';
+      const post = () => {
+        if (ranked) { App.rec.daily[date] = { s: res.time, at: Date.now(), g: gid }; saveRec(); }
+        showResult();
+      };
+      if (ranked && shared && !App.rec.name) promptName('').then((nm) => { if (nm) App.rec.name = nm; post(); });
+      else post();
+      function showResult() {
       const mine = App.rec.daily[date];
       const rows = [...App.board].map(([, d]) => d.daily && d.daily[date]).filter(Boolean).sort((a, b) => a.s - b.s);
       const rank = rows.findIndex((e) => e.s === mine.s && e.at === mine.at) + 1;
@@ -104,6 +121,7 @@ function startDaily() {
           h('p', { class: 'muted small' }, ranked ? 'Your time is on today\u2019s board.' : 'You already posted today, so this run is unranked.'),
           h('div', { class: 'stack' }, h('button', { class: 'btn you block', onclick: () => startRandom(LD.pick(Math.random, GAME_IDS)) }, 'Keep playing'), h('button', { class: 'btn ghost block', onclick: () => lobby() }, 'Race a friend'))),
         h('div', { class: 'sec' }, h('h2', null, 'Today\u2019s board'), h('div', { class: 'card' }, boardView()))));
+      }
     } });
 }
 function startRandom(gid, seed) {

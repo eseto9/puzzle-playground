@@ -18,7 +18,7 @@ cat <<'HEAD'
 HEAD
 cat src/style.css
 echo '</style></head><body><main id="app"></main><script>'
-cd src && cat logic.js logic2.js logic3.js game.js alibi.js bridge.js dogs.js lineup.js untangle.js paint.js hues.js registry.js store.js play.js match.js && cd ..
+cd src && cat logic.js logic2.js logic3.js game.js alibi.js bridge.js dogs.js lineup.js untangle.js paint.js hues.js registry.js relay.js store.js play.js match.js && cd ..
 echo '</script></body></html>'
 } > "$OUT"
 echo "built $OUT ($(wc -c < "$OUT") bytes)"

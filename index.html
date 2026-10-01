@@ -1956,9 +1956,146 @@ function puzzleFor(gid, seed) {
   return P;
 }
 'use strict';
+/* =========================================================
+   Public web relay: stands in for the Claude artifact's room/db/user
+   capabilities when this page runs outside Claude (e.g. GitHub Pages).
+   Everyone who opens this page, or knows a race code, shares one topic
+   tree on a free public MQTT broker; nothing private goes through it.
+   Same trick as the Whereabouts project (github.com/eseto9/Whereabouts).
+   ========================================================= */
+const WEB_RELAYS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
+const WEB_NS = 'witsend-eseto9/v1/';
+const MQTT_SRC = 'https://cdn.jsdelivr.net/npm/mqtt@5.16.0/dist/mqtt.min.js';
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+
+/* ---------- local identity + display name ---------- */
+function webIdentity() {
+  let id; try { id = localStorage.getItem('witsend:uid'); } catch (e) { id = null; }
+  if (!id || !/^w[a-z0-9]{10,24}$/.test(id)) { id = 'w' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 8); try { localStorage.setItem('witsend:uid', id); } catch (e) { /* ignore */ } }
+  return id;
+}
+function webUser(uid) { return { async id() { return uid; }, async profiles(ids) { const out = {}; ids.forEach((i) => { out[i] = (App.board.get(i) || {}).name || ''; }); return out; } }; }
+
+/* ---------- db shim: same doc()/collection() shape as the artifact's db,
+   backed by retained messages on the relay (a newcomer gets everyone's
+   latest retained message for free the moment they subscribe) ---------- */
+function webDb() {
+  let client = null, connectP = null; const rows = new Map(); const listeners = new Set();
+  function connect() {
+    if (connectP) return connectP;
+    connectP = (window.mqtt ? Promise.resolve() : loadScript(MQTT_SRC)).then(() => new Promise((resolve) => {
+      let relay = 0;
+      const tryConnect = () => {
+        const c = window.mqtt.connect(WEB_RELAYS[relay % WEB_RELAYS.length], { clientId: 'wd' + Math.random().toString(36).slice(2, 10), clean: true, keepalive: 30, reconnectPeriod: 4000, connectTimeout: 8000 });
+        let done = false;
+        c.on('connect', () => { if (done) return; done = true; client = c; c.subscribe(WEB_NS + 'lb/+', { qos: 0 }); resolve(c); });
+        c.on('message', (t, buf) => {
+          let d; try { d = JSON.parse(new TextDecoder().decode(buf)); } catch (e) { return; }
+          if (!d || typeof d !== 'object') return;
+          const id = t.slice((WEB_NS + 'lb/').length); if (!id) return;
+          rows.set(id, d); listeners.forEach((cb) => { try { cb(); } catch (e) { /* ignore */ } });
+        });
+        setTimeout(() => { if (!done) { done = true; try { c.end(true); } catch (e) { /* ignore */ } if (relay < WEB_RELAYS.length - 1) { relay++; tryConnect(); } else resolve(null); } }, 8000);
+      };
+      tryConnect();
+    })).catch(() => null);
+    return connectP;
+  }
+  connect();
+  return {
+    doc(path) {
+      const id = path.split('/')[1];
+      return { async set(data) { const c = await connect(); if (!c) throw Object.assign(new Error('offline'), { code: 'unavailable' }); rows.set(id, data); c.publish(WEB_NS + 'lb/' + id, JSON.stringify(data), { qos: 0, retain: true }); } };
+    },
+    collection() {
+      return {
+        onSnapshot(cb) {
+          const fire = () => cb({ docs: [...rows].map(([id, data]) => ({ id, data: () => data })) });
+          listeners.add(fire); connect().then(fire);
+          return () => listeners.delete(fire);
+        },
+      };
+    },
+  };
+}
+
+/* ---------- room shim: same on/emit/peers/onPeers/presence/leave shape as
+   the artifact's live room, scoped to one room id over the relay ---------- */
+function webRoom(id) {
+  const ME = 'w' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+  const HEARTBEAT = 2000, TIMEOUT = 7000;
+  const known = new Map([[ME, { presence: Object.freeze({}), updatedAt: Date.now(), seen: Infinity }]]);
+  const frozen = new Map(), topics = new Map(), peerHandlers = new Set();
+  const pending = { joined: new Set([ME]), left: new Map(), updated: new Set() };
+  let snapshot = null, flushT = null, client = null, lastSent = 0, sendT = null, relay = 0;
+  const sender = (peer) => ({ peer, by: null, isMe: peer === ME, sameTab: peer === ME, kind: 'viewer', guest: false });
+  const peerObj = (pid) => { const k = known.get(pid); let p = frozen.get(pid); if (!p || p.presence !== k.presence) { p = Object.freeze(Object.assign(sender(pid), { presence: k.presence, updatedAt: k.updatedAt })); frozen.set(pid, p); } return p; };
+  const peers = () => snapshot || (snapshot = Object.freeze([...known.keys()].map(peerObj)));
+  function touch(kind, pid) {
+    snapshot = null;
+    if (kind === 'joined') { pending.joined.add(pid); pending.left.delete(pid); }
+    else if (kind === 'left') { if (!pending.joined.delete(pid)) pending.left.set(pid, frozen.get(pid) || Object.freeze(Object.assign(sender(pid), { presence: Object.freeze({}), updatedAt: Date.now() }))); pending.updated.delete(pid); frozen.delete(pid); }
+    else if (!pending.joined.has(pid)) pending.updated.add(pid);
+    if (!flushT && peerHandlers.size) flushT = setTimeout(flush, 16);
+  }
+  function flush() {
+    flushT = null;
+    const ch = Object.freeze({ peers: peers(), joined: Object.freeze([...pending.joined].filter((pid) => known.has(pid)).map(peerObj)), left: Object.freeze([...pending.left.values()]), updated: Object.freeze([...pending.updated].filter((pid) => known.has(pid)).map(peerObj)) });
+    pending.joined.clear(); pending.left.clear(); pending.updated.clear();
+    if (ch.joined.length || ch.left.length || ch.updated.length) for (const fn of [...peerHandlers]) { try { fn(ch); } catch (e) { /* ignore */ } }
+  }
+  function setPresence(pid, pres) {
+    const had = known.has(pid), k = known.get(pid) || { presence: Object.freeze({}), updatedAt: 0, seen: 0 };
+    k.seen = pid === ME ? Infinity : Date.now();
+    const changed = !had || JSON.stringify(k.presence) !== JSON.stringify(pres);
+    if (changed) { k.presence = Object.freeze(pres); k.updatedAt = Date.now(); }
+    known.set(pid, k); if (!had) touch('joined', pid); else if (changed) touch('updated', pid);
+  }
+  function drop(pid) { if (pid !== ME && known.delete(pid)) touch('left', pid); }
+  function deliver(topic, from, data) { const hs = topics.get(topic); if (!hs) return; const msg = Object.freeze(Object.assign(sender(from), { topic, data })); for (const fn of [...hs]) { try { fn(msg); } catch (e) { /* ignore */ } } }
+  const base = WEB_NS + 'room/' + id + '/';
+  const pub = (t, obj) => { if (client && client.connected) client.publish(base + t, JSON.stringify(obj), { qos: 0 }); };
+  function announce() { lastSent = Date.now(); pub('p/' + ME, { p: known.get(ME).presence }); }
+  function onMessage(t, buf) {
+    let m; try { m = JSON.parse(new TextDecoder().decode(buf)); } catch (e) { return; }
+    if (!m || typeof m !== 'object') return;
+    const rest = t.slice(base.length);
+    if (rest.startsWith('p/')) { const pid = rest.slice(2); if (pid === ME || !/^w[a-z0-9]{6,20}$/.test(pid)) return; if (m.bye) { drop(pid); return; } if (m.p && typeof m.p === 'object' && !Array.isArray(m.p)) setPresence(pid, m.p); }
+    else if (rest === 'hello') { if (m.from !== ME) announce(); }
+    else if (rest === 'e') { if (m.from === ME || typeof m.topic !== 'string' || typeof m.from !== 'string') return; if (!known.has(m.from)) return; deliver(m.topic, m.from, m.data); }
+  }
+  function connect() {
+    const tryConnect = () => {
+      const url = WEB_RELAYS[relay % WEB_RELAYS.length];
+      const c = window.mqtt.connect(url, { clientId: ME, clean: true, keepalive: 20, reconnectPeriod: 3000, connectTimeout: 8000, will: { topic: base + 'p/' + ME, payload: JSON.stringify({ bye: 1 }), qos: 0, retain: false } });
+      client = c; let ever = false;
+      c.on('connect', () => { ever = true; c.subscribe(base + '#', { qos: 0 }, () => { pub('hello', { from: ME }); announce(); }); });
+      c.on('message', onMessage);
+      setTimeout(() => { if (client === c && !ever) { relay++; if (relay < WEB_RELAYS.length) tryConnect(); } }, 9000);
+    };
+    (window.mqtt ? Promise.resolve() : loadScript(MQTT_SRC)).then(tryConnect).catch(() => {});
+  }
+  connect();
+  const hb = setInterval(() => { if (!client) return; if (Date.now() - lastSent >= HEARTBEAT) announce(); const now = Date.now(); for (const [pid, k] of known) if (pid !== ME && now - k.seen > TIMEOUT) drop(pid); }, 1000);
+  return {
+    async emit(topic, data) { pub('e', { from: ME, topic, data }); setTimeout(() => deliver(topic, ME, data), 0); },
+    on(topic, handler) { if (!topics.has(topic)) topics.set(topic, new Set()); const fn = (m) => handler(m); topics.get(topic).add(fn); return () => topics.get(topic).delete(fn); },
+    async presence(patch) {
+      const next = Object.assign({}, known.get(ME).presence);
+      for (const [k, v] of Object.entries(patch || {})) { if (v === null) delete next[k]; else next[k] = v; }
+      setPresence(ME, JSON.parse(JSON.stringify(next)));
+      if (Date.now() - lastSent >= 100) announce(); else if (!sendT) sendT = setTimeout(() => { sendT = null; announce(); }, 100);
+    },
+    peers,
+    onPeers(handler) { const fn = (c) => handler(c); peerHandlers.add(fn); queueMicrotask(() => { if (peerHandlers.has(fn)) handler(Object.freeze({ peers: peers(), joined: peers(), left: Object.freeze([]), updated: Object.freeze([]) })); }); return () => peerHandlers.delete(fn); },
+    leave() { clearInterval(hb); try { pub('p/' + ME, { bye: 1 }); } catch (e) { /* ignore */ } try { client && client.end(true); } catch (e) { /* ignore */ } },
+  };
+}
+function webRoomManager() { return { async join(id) { return webRoom(id); } }; }
+'use strict';
 const App = { uid: 'local', db: null, user: null, room: null, rec: null, board: new Map(), listeners: [], screen: 'home' };
 const LS_KEY = 'logicduel:rec:v6';
-const defRec = () => ({ v: 6, daily: {}, elo: { r: 1200, n: 0 } });
+const defRec = () => ({ v: 6, name: '', daily: {}, elo: { r: 1200, n: 0 } });
 function lsGet() { try { const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 function lsSet(r) { try { localStorage.setItem(LS_KEY, JSON.stringify(r)); } catch (e) { /* unavailable */ } }
 function stable(o) { if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']'; if (o && typeof o === 'object') return '{' + Object.keys(o).sort().map((k) => JSON.stringify(k) + ':' + stable(o[k])).join(',') + '}'; return JSON.stringify(o); }
@@ -1969,6 +2106,7 @@ function mergeRec(a, b) {
     const dd = x.daily || {};
     Object.keys(dd).forEach((d) => { const e = dd[d]; if (!e || typeof e.s !== 'number') return; if (!o.daily[d] || (e.at || 0) < (o.daily[d].at || 0)) o.daily[d] = e; });
     const el = x.elo || {}; if ((el.n | 0) > o.elo.n) o.elo = { r: +el.r || 1200, n: el.n | 0 };
+    if (!o.name && typeof x.name === 'string' && x.name) o.name = x.name;
   });
   return o;
 }
@@ -1990,11 +2128,16 @@ function saveRec() {
 }
 async function initCaps() {
   App.rec = mergeRec(defRec(), lsGet()); App.board.set(App.uid, App.rec);
-  if (!window.claude || !window.claude.use) return;
-  try { App.user = await claude.use('user'); } catch (e) { /* none */ }
-  try { if (App.user) { const id = await App.user.id(); if (id) App.uid = id; } } catch (e) { /* none */ }
-  try { App.db = await claude.use('db'); } catch (e) { /* none */ }
-  try { App.room = await claude.use('room'); } catch (e) { /* none */ }
+  if (window.claude && window.claude.use) {
+    try { App.user = await claude.use('user'); } catch (e) { /* none */ }
+    try { if (App.user) { const id = await App.user.id(); if (id) App.uid = id; } } catch (e) { /* none */ }
+    try { App.db = await claude.use('db'); } catch (e) { /* none */ }
+    try { App.room = await claude.use('room'); } catch (e) { /* none */ }
+  } else {
+    // not inside Claude at all (e.g. GitHub Pages): fall back to a free public
+    // relay for live races and a shared board, the same trick as Whereabouts
+    App.uid = webIdentity(); App.user = webUser(App.uid); App.db = webDb(); App.room = webRoomManager();
+  }
   App.board = new Map([[App.uid, App.rec]]);
   if (App.db && App.uid !== 'local') {
     try {
@@ -2053,6 +2196,17 @@ function dialog(msg, ok, cancel) {
   });
 }
 const confirmQuit = (fn) => dialog('Leave this puzzle? Your time will be lost.', 'Leave', 'Keep playing').then((v) => { if (v) fn(); });
+function promptName(current) {
+  return new Promise((res) => {
+    const inp = h('input', { class: 'field', placeholder: 'Your name', maxlength: 18, autocomplete: 'off', value: current || '' });
+    const close = (v) => { m.remove(); res(v); };
+    const m = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' }, h('div', { class: 'box' },
+      h('p', null, 'Add your name so others can see it on the board.'), inp,
+      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: () => close(null) }, 'Skip'), h('button', { class: 'btn', onclick: () => close(inp.value.trim().slice(0, 18)) }, 'Save'))));
+    document.body.append(m); setTimeout(() => inp.focus(), 50);
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') close(inp.value.trim().slice(0, 18)); });
+  });
+}
 const reduceMotion = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
 
 /* ---------- completion celebration ---------- */
@@ -2135,8 +2289,14 @@ function startDaily() {
   playScreen({ gameId: gid, seed, title: 'Today\u2019s puzzle', sub: GAMES[gid].name + ' \u00B7 ' + date, onQuit: () => home(),
     onGiveUp: () => view(h('div', { class: 'wrap' }, h('div', { class: 'card result' }, h('div', { class: 'muted' }, GAMES[gid].name), h('h1', null, 'Answer revealed'), h('p', { class: 'muted small' }, 'No time posted. Solve it fully to get on today\u2019s board.'), h('div', { class: 'stack' }, h('button', { class: 'btn you block', onclick: () => startDaily() }, 'Try again'), h('button', { class: 'btn ghost block', onclick: () => startRandom(gid) }, 'Play another ' + GAMES[gid].name), homeBtn())))),
     onSolved: (res) => {
-      const ranked = !App.rec.daily[date];
-      if (ranked) { App.rec.daily[date] = { s: res.time, at: Date.now(), g: gid }; saveRec(); }
+      const ranked = !App.rec.daily[date]; const shared = App.db && App.uid !== 'local';
+      const post = () => {
+        if (ranked) { App.rec.daily[date] = { s: res.time, at: Date.now(), g: gid }; saveRec(); }
+        showResult();
+      };
+      if (ranked && shared && !App.rec.name) promptName('').then((nm) => { if (nm) App.rec.name = nm; post(); });
+      else post();
+      function showResult() {
       const mine = App.rec.daily[date];
       const rows = [...App.board].map(([, d]) => d.daily && d.daily[date]).filter(Boolean).sort((a, b) => a.s - b.s);
       const rank = rows.findIndex((e) => e.s === mine.s && e.at === mine.at) + 1;
@@ -2146,6 +2306,7 @@ function startDaily() {
           h('p', { class: 'muted small' }, ranked ? 'Your time is on today\u2019s board.' : 'You already posted today, so this run is unranked.'),
           h('div', { class: 'stack' }, h('button', { class: 'btn you block', onclick: () => startRandom(LD.pick(Math.random, GAME_IDS)) }, 'Keep playing'), h('button', { class: 'btn ghost block', onclick: () => lobby() }, 'Race a friend'))),
         h('div', { class: 'sec' }, h('h2', null, 'Today\u2019s board'), h('div', { class: 'card' }, boardView()))));
+      }
     } });
 }
 function startRandom(gid, seed) {
@@ -2326,18 +2487,22 @@ function home() {
   App.screen = 'home'; const date = todayStr(); const dp = dailyPick(date); const dg = dp.gid;
   const recLine = h('div', { class: 'rec' }); const friendBtn = h('button', { class: 'btn rival', onclick: () => lobby() }, 'Race a friend');
   const dailyBtn = h('button', { class: 'btn you block', onclick: () => startDaily() }, ''); const streakEl = h('span', { class: 'streak' });
+  const nameRow = h('div', { class: 'muted small', style: 'margin:6px 0 10px;cursor:pointer', onclick: () => editName() });
+  function editName() { promptName(App.rec.name || '').then((nm) => { if (nm != null) { App.rec.name = nm; saveRec(); } refresh(); }); }
   function refresh() {
     if (App.screen !== 'home') return; const r = App.rec;
     recLine.textContent = App.room ? 'Your Elo ' + r.elo.r + (r.elo.n ? ' \u00B7 ' + r.elo.n + (r.elo.n === 1 ? ' race' : ' races') : '') : 'Live races need this page opened signed in on claude.ai';
     friendBtn.disabled = !App.room;
     const d = r.daily[todayStr()]; dailyBtn.textContent = d ? 'Today\u2019s time ' + fmt(d.s) + '. Play again, unranked' : 'Play today\u2019s puzzle'; dailyBtn.className = 'btn block ' + (d ? 'ghost' : 'you');
     const s = streak(); streakEl.textContent = s ? s + ' day streak' : '';
+    const shared = App.db && App.uid !== 'local'; nameRow.hidden = !shared;
+    nameRow.textContent = !shared ? '' : r.name ? 'Playing as ' + r.name + ' \u00B7 change' : 'Add your name so others can see it on the board \u2192';
   }
   const hero = h('section', { class: 'hero', 'aria-label': 'Race a friend' },
     h('div', { class: 'lanes', 'aria-hidden': 'true' }, h('div', { class: 'lane-row' }, h('span', null, 'You'), h('div', { class: 'lane you', style: '--to:78%' }, h('i'))), h('div', { class: 'lane-row' }, h('span', null, 'Friend'), h('div', { class: 'lane rival', style: '--to:61%' }, h('i')))),
     h('h1', null, 'Race a friend on puzzles you pick'), h('div', { class: 'cta-row' }, friendBtn, h('button', { class: 'btn you', onclick: () => startDaily() }, 'Daily puzzle')), recLine);
   const daily = h('section', { class: 'sec' }, h('h2', null, 'Today\u2019s puzzle'),
-    h('div', { class: 'card' }, h('div', { class: 'today' }, h('span', { class: 'gem', style: '--tc:' + GAMES[dg].tc }, GAMES[dg].em), h('div', null, h('b', null, GAMES[dg].name), h('span', { class: 'muted small', style: 'display:block' }, GAMES[dg].blurb + '. A new puzzle every day.'))), dailyBtn, boardView()));
+    h('div', { class: 'card' }, h('div', { class: 'today' }, h('span', { class: 'gem', style: '--tc:' + GAMES[dg].tc }, GAMES[dg].em), h('div', null, h('b', null, GAMES[dg].name), h('span', { class: 'muted small', style: 'display:block' }, GAMES[dg].blurb + '. A new puzzle every day.'))), dailyBtn, nameRow, boardView()));
   const tiles = h('div', { class: 'tiles' }, ...GAME_IDS.map((id) => h('button', { class: 'tile', onclick: () => startRandom(id) }, h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em), h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, GAMES[id].blurb)))),
     h('button', { class: 'tile wide', onclick: () => startSurprise() }, h('div', null, h('b', null, 'Surprise me'), h('span', { class: 'd' }, 'A random puzzle from a random game.'))));
   view(h('div', { class: 'wrap' }, h('div', { class: 'brand' }, h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i')), h('b', null, 'Wits\u2019 End'), streakEl), hero, daily, h('section', { class: 'sec' }, h('h2', null, 'Keep playing'), tiles)));

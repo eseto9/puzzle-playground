@@ -164,18 +164,22 @@ function home() {
   App.screen = 'home'; const date = todayStr(); const dp = dailyPick(date); const dg = dp.gid;
   const recLine = h('div', { class: 'rec' }); const friendBtn = h('button', { class: 'btn rival', onclick: () => lobby() }, 'Race a friend');
   const dailyBtn = h('button', { class: 'btn you block', onclick: () => startDaily() }, ''); const streakEl = h('span', { class: 'streak' });
+  const nameRow = h('div', { class: 'muted small', style: 'margin:6px 0 10px;cursor:pointer', onclick: () => editName() });
+  function editName() { promptName(App.rec.name || '').then((nm) => { if (nm != null) { App.rec.name = nm; saveRec(); } refresh(); }); }
   function refresh() {
     if (App.screen !== 'home') return; const r = App.rec;
     recLine.textContent = App.room ? 'Your Elo ' + r.elo.r + (r.elo.n ? ' \u00B7 ' + r.elo.n + (r.elo.n === 1 ? ' race' : ' races') : '') : 'Live races need this page opened signed in on claude.ai';
     friendBtn.disabled = !App.room;
     const d = r.daily[todayStr()]; dailyBtn.textContent = d ? 'Today\u2019s time ' + fmt(d.s) + '. Play again, unranked' : 'Play today\u2019s puzzle'; dailyBtn.className = 'btn block ' + (d ? 'ghost' : 'you');
     const s = streak(); streakEl.textContent = s ? s + ' day streak' : '';
+    const shared = App.db && App.uid !== 'local'; nameRow.hidden = !shared;
+    nameRow.textContent = !shared ? '' : r.name ? 'Playing as ' + r.name + ' \u00B7 change' : 'Add your name so others can see it on the board \u2192';
   }
   const hero = h('section', { class: 'hero', 'aria-label': 'Race a friend' },
     h('div', { class: 'lanes', 'aria-hidden': 'true' }, h('div', { class: 'lane-row' }, h('span', null, 'You'), h('div', { class: 'lane you', style: '--to:78%' }, h('i'))), h('div', { class: 'lane-row' }, h('span', null, 'Friend'), h('div', { class: 'lane rival', style: '--to:61%' }, h('i')))),
     h('h1', null, 'Race a friend on puzzles you pick'), h('div', { class: 'cta-row' }, friendBtn, h('button', { class: 'btn you', onclick: () => startDaily() }, 'Daily puzzle')), recLine);
   const daily = h('section', { class: 'sec' }, h('h2', null, 'Today\u2019s puzzle'),
-    h('div', { class: 'card' }, h('div', { class: 'today' }, h('span', { class: 'gem', style: '--tc:' + GAMES[dg].tc }, GAMES[dg].em), h('div', null, h('b', null, GAMES[dg].name), h('span', { class: 'muted small', style: 'display:block' }, GAMES[dg].blurb + '. A new puzzle every day.'))), dailyBtn, boardView()));
+    h('div', { class: 'card' }, h('div', { class: 'today' }, h('span', { class: 'gem', style: '--tc:' + GAMES[dg].tc }, GAMES[dg].em), h('div', null, h('b', null, GAMES[dg].name), h('span', { class: 'muted small', style: 'display:block' }, GAMES[dg].blurb + '. A new puzzle every day.'))), dailyBtn, nameRow, boardView()));
   const tiles = h('div', { class: 'tiles' }, ...GAME_IDS.map((id) => h('button', { class: 'tile', onclick: () => startRandom(id) }, h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em), h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, GAMES[id].blurb)))),
     h('button', { class: 'tile wide', onclick: () => startSurprise() }, h('div', null, h('b', null, 'Surprise me'), h('span', { class: 'd' }, 'A random puzzle from a random game.'))));
   view(h('div', { class: 'wrap' }, h('div', { class: 'brand' }, h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i')), h('b', null, 'Wits\u2019 End'), streakEl), hero, daily, h('section', { class: 'sec' }, h('h2', null, 'Keep playing'), tiles)));

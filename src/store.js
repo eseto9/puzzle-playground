@@ -1,7 +1,7 @@
 'use strict';
 const App = { uid: 'local', db: null, user: null, room: null, rec: null, board: new Map(), listeners: [], screen: 'home' };
 const LS_KEY = 'logicduel:rec:v6';
-const defRec = () => ({ v: 6, daily: {}, elo: { r: 1200, n: 0 } });
+const defRec = () => ({ v: 6, name: '', daily: {}, elo: { r: 1200, n: 0 } });
 function lsGet() { try { const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 function lsSet(r) { try { localStorage.setItem(LS_KEY, JSON.stringify(r)); } catch (e) { /* unavailable */ } }
 function stable(o) { if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']'; if (o && typeof o === 'object') return '{' + Object.keys(o).sort().map((k) => JSON.stringify(k) + ':' + stable(o[k])).join(',') + '}'; return JSON.stringify(o); }
@@ -12,6 +12,7 @@ function mergeRec(a, b) {
     const dd = x.daily || {};
     Object.keys(dd).forEach((d) => { const e = dd[d]; if (!e || typeof e.s !== 'number') return; if (!o.daily[d] || (e.at || 0) < (o.daily[d].at || 0)) o.daily[d] = e; });
     const el = x.elo || {}; if ((el.n | 0) > o.elo.n) o.elo = { r: +el.r || 1200, n: el.n | 0 };
+    if (!o.name && typeof x.name === 'string' && x.name) o.name = x.name;
   });
   return o;
 }
@@ -33,11 +34,16 @@ function saveRec() {
 }
 async function initCaps() {
   App.rec = mergeRec(defRec(), lsGet()); App.board.set(App.uid, App.rec);
-  if (!window.claude || !window.claude.use) return;
-  try { App.user = await claude.use('user'); } catch (e) { /* none */ }
-  try { if (App.user) { const id = await App.user.id(); if (id) App.uid = id; } } catch (e) { /* none */ }
-  try { App.db = await claude.use('db'); } catch (e) { /* none */ }
-  try { App.room = await claude.use('room'); } catch (e) { /* none */ }
+  if (window.claude && window.claude.use) {
+    try { App.user = await claude.use('user'); } catch (e) { /* none */ }
+    try { if (App.user) { const id = await App.user.id(); if (id) App.uid = id; } } catch (e) { /* none */ }
+    try { App.db = await claude.use('db'); } catch (e) { /* none */ }
+    try { App.room = await claude.use('room'); } catch (e) { /* none */ }
+  } else {
+    // not inside Claude at all (e.g. GitHub Pages): fall back to a free public
+    // relay for live races and a shared board, the same trick as Whereabouts
+    App.uid = webIdentity(); App.user = webUser(App.uid); App.db = webDb(); App.room = webRoomManager();
+  }
   App.board = new Map([[App.uid, App.rec]]);
   if (App.db && App.uid !== 'local') {
     try {
