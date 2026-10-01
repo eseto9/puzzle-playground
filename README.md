@@ -1,6 +1,6 @@
-# Wits' End
+# Puzzle Playground
 
-Eight bite-sized logic puzzles you can race a friend on. Each takes about one to two minutes, every puzzle is generated fresh with exactly one solution, and when you hit your wits' end there is a **Give up and see the answer** button.
+Eight bite-sized logic puzzles you can race a friend on. Each takes about one to two minutes, every puzzle is generated fresh with exactly one solution, and when you're stuck there is a **Give up and see the answer** button.
 
 ## The puzzles
 
@@ -31,7 +31,7 @@ open index.html     # or serve it with any static server
 npm test            # checks every generator produces valid, uniquely solvable puzzles
 ```
 
-Without a shared backend the daily board, Elo board and live races fall back to local-only play. They light up when the page runs inside a host that provides the `db`, `room` and `user` capabilities (this project was built as a [Claude](https://claude.ai) artifact), and degrade gracefully when those are missing.
+This project was built as a [Claude](https://claude.ai) artifact, which provides `db`, `room` and `user` capabilities for the daily board, Elo board and live races. Outside that host (e.g. GitHub Pages) it falls back to a free public MQTT relay for the same features (see `src/relay.js`), and degrades to local-only play if that relay can't be reached.
 
 ## How it works
 
