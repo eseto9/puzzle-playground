@@ -14,7 +14,7 @@ function faceSVG(f, size) {
     (f.glasses ? '' : '<circle cx="25.5" cy="35" r="1.7" fill="#2b2733"/><circle cx="38.5" cy="35" r="1.7" fill="#2b2733"/>') + (f.glasses === 1 ? '<circle cx="25" cy="35" r="1.3" fill="#2b2733"/><circle cx="39" cy="35" r="1.3" fill="#2b2733"/>' : '') +
     `<path d="M27 ${f.beard ? 45 : 44}q5 3.4 10 0" stroke="${f.beard ? '#fff' : '#9a4d3a'}" stroke-width="1.6" fill="none" stroke-linecap="round"/>` + glassSVG(f.glasses) + hatSVG(f.hat) + '</svg>';
 }
-const bareHead = (hc) => `<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="38" rx="17" ry="19" fill="#E2A97E"/><path d="M13 30c0-22 38-22 38 0v6c-4-6-8-9-19-9s-15 3-19 9z" fill="${hc || '#9a9ab0'}"/></svg>`;
+const bareHead = (hc) => `<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="38" rx="17" ry="19" fill="#E2A97E"/><path d="M13 30c0-22 38-22 38 0v6c-4-6-8-9-19-9s-15 3-19 9z" fill="${hc || '#9a9ab0'}"/><circle cx="32" cy="38" r="12" fill="rgba(255,255,255,.62)"/><text x="32" y="44" font-size="18" font-weight="800" text-anchor="middle" fill="#5B4E86">?</text></svg>`;
 const beardIcon = '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="34" rx="17" ry="19" fill="#E2A97E"/><path d="M15 38c2 22 32 22 34 0-4 8-10 11-17 11s-13-3-17-11z" fill="#4a3322"/></svg>';
 function atomIcon(a) {
   if (a.attr === 'hair') return bareHead(HAIRC[a.v]);
@@ -27,14 +27,14 @@ const BARE = { hair: (v) => HAIRN[v] + ' hair', hat: (v) => ['', 'cap', 'top hat
 const atomTxt = (a) => NOUN[a.attr](a.v); const bareTxt = (a) => BARE[a.attr](a.v);
 function lnClueText(c) {
   switch (c.k) {
-    case 'has': return 'Has ' + atomTxt(c); case 'not': return 'Has no ' + bareTxt(c);
-    case 'any': return 'Wears ' + (c.attr === 'hat' ? 'a hat' : 'glasses'); case 'none': return 'Wears no ' + (c.attr === 'hat' ? 'hat' : 'glasses');
-    case 'or': return 'Has ' + atomTxt(c.a) + ' or ' + atomTxt(c.b); case 'neither': return 'Has neither ' + atomTxt(c.a) + ' nor ' + atomTxt(c.b);
-    case 'acc': return 'Has exactly ' + c.n + (c.n === 1 ? ' accessory' : ' accessories') + ' (hat, glasses, beard)';
-    case 'rowCnt': return 'In their row, exactly ' + c.n + ' people have ' + atomTxt(c); case 'colCnt': return 'In their column, exactly ' + c.n + ' people have ' + atomTxt(c);
-    case 'dir': return 'Someone with ' + atomTxt(c) + ' stands directly ' + ({ up: 'above', down: 'below', left: 'to the left of', right: 'to the right of' })[c.dir] + ' them'; case 'twin': return 'Has the same hair colour as a neighbour';
-    case 'col': return 'Is in column ' + (c.v + 1); case 'row': return 'Is in row ' + (c.v + 1);
-    case 'next': return 'Stands next to someone with ' + atomTxt(c); default: return 'Does not stand next to anyone with ' + atomTxt(c);
+    case 'has': return 'The culprit has ' + atomTxt(c); case 'not': return 'The culprit has no ' + bareTxt(c);
+    case 'any': return 'The culprit wears ' + (c.attr === 'hat' ? 'a hat' : 'glasses'); case 'none': return 'The culprit wears no ' + (c.attr === 'hat' ? 'hat' : 'glasses');
+    case 'or': return 'The culprit has ' + atomTxt(c.a) + ' or ' + atomTxt(c.b); case 'neither': return 'The culprit has neither ' + atomTxt(c.a) + ' nor ' + atomTxt(c.b);
+    case 'acc': return 'The culprit has exactly ' + c.n + (c.n === 1 ? ' accessory' : ' accessories') + ' (hat, glasses, beard)';
+    case 'rowCnt': return 'In the culprit’s row, exactly ' + c.n + ' people have ' + atomTxt(c); case 'colCnt': return 'In the culprit’s column, exactly ' + c.n + ' people have ' + atomTxt(c);
+    case 'dir': return 'Someone with ' + atomTxt(c) + ' stands directly ' + ({ up: 'above', down: 'below', left: 'to the left of', right: 'to the right of' })[c.dir] + ' the culprit'; case 'twin': return 'The culprit has the same hair colour as a neighbour';
+    case 'col': return 'The culprit is in column ' + (c.v + 1); case 'row': return 'The culprit is in row ' + (c.v + 1);
+    case 'next': return 'The culprit stands next to someone with ' + atomTxt(c); default: return 'The culprit does not stand next to anyone with ' + atomTxt(c);
   }
 }
 function lnMini(hi) {
@@ -43,20 +43,20 @@ function lnMini(hi) {
 function lnClueCard(c) {
   const ic = (a) => h('span', { class: 'lnic', html: atomIcon(a) }); const yes = () => h('i', { class: 'yes' }, '\u2713'); const no = () => h('i', { class: 'no' }, '\u2715'); let inner, cap;
   switch (c.k) {
-    case 'has': inner = [ic(c), yes()]; cap = cc(atomTxt(c)); break;
-    case 'not': inner = [ic(c), no()]; cap = 'No ' + bareTxt(c); break;
-    case 'any': inner = [ic({ attr: c.attr, v: 1 }), ic({ attr: c.attr, v: 2 }), yes()]; cap = c.attr === 'hat' ? 'Wears a hat' : 'Wears glasses'; break;
-    case 'none': inner = [ic({ attr: c.attr, v: 1 }), ic({ attr: c.attr, v: 2 }), no()]; cap = c.attr === 'hat' ? 'No hat at all' : 'No glasses at all'; break;
-    case 'or': inner = [ic(c.a), h('i', { class: 'orw' }, 'or'), ic(c.b)]; cap = 'One of these'; break;
-    case 'neither': inner = [ic(c.a), ic(c.b), no()]; cap = 'Neither of these'; break;
-    case 'col': inner = [h('span', { class: 'lnmini', html: lnMini({ col: c.v }) })]; cap = 'Column ' + (c.v + 1) + ' of 5'; break;
-    case 'row': inner = [h('span', { class: 'lnmini', html: lnMini({ row: c.v }) })]; cap = 'Row ' + (c.v + 1) + ' of 4'; break;
-    case 'acc': inner = [h('span', { class: 'accrow' }, ic({ attr: 'hat', v: 1 }), ic({ attr: 'glasses', v: 1 }), ic({ attr: 'beard', v: 1 })), h('i', { class: 'accn' }, c.n)]; cap = c.n + ' of hat, glasses, beard'; break;
-    case 'rowCnt': case 'colCnt': inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, c.k === 'rowCnt' ? '\u2194' : '\u2195'), ic(c), h('i', { class: 'accn sm' }, c.n)]; cap = (c.k === 'rowCnt' ? 'Their row' : 'Their column') + ': exactly ' + c.n; break;
-    case 'dir': { const cell = (k) => h('i', { class: 'dc' + (k === 'u' ? ' on' : '') }); const pos = { up: 'u', down: 'd', left: 'l', right: 'r' }[c.dir]; inner = h('span', { class: 'dir3' }, ['u', 'l', 'm', 'r', 'd'].map((k) => (k === 'm' ? h('i', { class: 'dc me', html: bareHead() }) : k === pos ? h('i', { class: 'dc tgt k' + k }, ic(c)) : h('i', { class: 'dc k' + k })))); cap = 'Right ' + ({ up: 'above', down: 'below', left: 'left of', right: 'right of' })[c.dir] + ' them'; break; }
-    case 'twin': inner = [h('span', { class: 'lnic', html: bareHead('#B9B3D3') }), h('i', { class: 'eq' }, '='), h('span', { class: 'lnic', html: bareHead('#B9B3D3') })]; cap = 'Same hair as a neighbour'; break;
-    case 'next': inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, '\u2194'), ic(c)]; cap = 'Next to ' + atomTxt(c); break;
-    default: inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, '\u2194'), ic(c), no()]; cap = 'Not next to ' + atomTxt(c);
+    case 'has': inner = [ic(c), yes()]; cap = 'Culprit: ' + atomTxt(c); break;
+    case 'not': inner = [ic(c), no()]; cap = 'Culprit: no ' + bareTxt(c); break;
+    case 'any': inner = [ic({ attr: c.attr, v: 1 }), ic({ attr: c.attr, v: 2 }), yes()]; cap = c.attr === 'hat' ? 'Culprit wears a hat' : 'Culprit wears glasses'; break;
+    case 'none': inner = [ic({ attr: c.attr, v: 1 }), ic({ attr: c.attr, v: 2 }), no()]; cap = c.attr === 'hat' ? 'Culprit: no hat at all' : 'Culprit: no glasses at all'; break;
+    case 'or': inner = [ic(c.a), h('i', { class: 'orw' }, 'or'), ic(c.b)]; cap = 'Culprit has one of these'; break;
+    case 'neither': inner = [ic(c.a), ic(c.b), no()]; cap = 'Culprit has neither'; break;
+    case 'col': inner = [h('span', { class: 'lnmini', html: lnMini({ col: c.v }) })]; cap = 'Culprit: column ' + (c.v + 1) + ' of 5'; break;
+    case 'row': inner = [h('span', { class: 'lnmini', html: lnMini({ row: c.v }) })]; cap = 'Culprit: row ' + (c.v + 1) + ' of 4'; break;
+    case 'acc': inner = [h('span', { class: 'accrow' }, ic({ attr: 'hat', v: 1 }), ic({ attr: 'glasses', v: 1 }), ic({ attr: 'beard', v: 1 })), h('i', { class: 'accn' }, c.n)]; cap = 'Culprit has ' + c.n + ' of hat, glasses, beard'; break;
+    case 'rowCnt': case 'colCnt': inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, c.k === 'rowCnt' ? '\u2194' : '\u2195'), ic(c), h('i', { class: 'accn sm' }, c.n)]; cap = (c.k === 'rowCnt' ? 'Culprit\u2019s row' : 'Culprit\u2019s column') + ': exactly ' + c.n; break;
+    case 'dir': { const cell = (k) => h('i', { class: 'dc' + (k === 'u' ? ' on' : '') }); const pos = { up: 'u', down: 'd', left: 'l', right: 'r' }[c.dir]; inner = h('span', { class: 'dir3' }, ['u', 'l', 'm', 'r', 'd'].map((k) => (k === 'm' ? h('i', { class: 'dc me', html: bareHead() }) : k === pos ? h('i', { class: 'dc tgt k' + k }, ic(c)) : h('i', { class: 'dc k' + k })))); cap = 'Stands ' + ({ up: 'above', down: 'below', left: 'left of', right: 'right of' })[c.dir] + ' the culprit'; break; }
+    case 'twin': inner = [h('span', { class: 'lnic', html: bareHead('#B9B3D3') }), h('i', { class: 'eq' }, '='), h('span', { class: 'lnic', html: bareHead('#B9B3D3') })]; cap = 'Culprit: same hair as a neighbour'; break;
+    case 'next': inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, '\u2194'), ic(c)]; cap = 'Culprit: next to ' + atomTxt(c); break;
+    default: inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, '\u2194'), ic(c), no()]; cap = 'Culprit: not next to ' + atomTxt(c);
   }
   const txt = lnClueText(c);
   return h('div', { class: 'clue cp ln-c', role: 'img', 'aria-label': txt, title: txt }, h('div', { class: 'cin' }, inner), h('span', { class: 'cap' }, cap));

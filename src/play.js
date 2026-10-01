@@ -13,7 +13,7 @@ function dialog(msg, ok, cancel) {
 const confirmQuit = (fn) => dialog('Leave this puzzle? Your time will be lost.', 'Leave', 'Keep playing').then((v) => { if (v) fn(); });
 function promptName(current) {
   return new Promise((res) => {
-    const inp = h('input', { class: 'field', placeholder: 'Your name', maxlength: 18, autocomplete: 'off', value: current || '' });
+    const inp = h('input', { class: 'field sm', placeholder: 'Your name', maxlength: 18, autocomplete: 'off', value: current || '' });
     const close = (v) => { m.remove(); res(v); };
     const m = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' }, h('div', { class: 'box' },
       h('p', null, 'Add your name so others can see it on the board.'), inp,

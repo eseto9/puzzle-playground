@@ -143,6 +143,9 @@ h2{font-size:21px;font-weight:700}
 .code{font:800 54px/1 var(--font-d);letter-spacing:.14em;text-align:center;margin:14px 0 6px;padding-left:.14em}
 .field{width:100%;font:700 26px var(--font-d);letter-spacing:.2em;text-transform:uppercase;text-align:center;padding:12px;border-radius:12px;border:0;box-shadow:inset 0 0 0 1.5px var(--line-strong);background:var(--surface);color:var(--ink)}
 .field::placeholder{letter-spacing:.1em;color:var(--muted);font-weight:500;font-size:18px;text-transform:none}
+.field.sm{font:600 16px var(--font-b);letter-spacing:normal;text-transform:none;text-align:left;padding:10px 12px}
+.field.sm::placeholder{letter-spacing:normal;font-size:15px;text-transform:none}
+.namefield{margin-bottom:14px;padding-bottom:14px;border-bottom:1.5px solid var(--line)}
 .who{display:flex;gap:8px;align-items:center;justify-content:center;margin:10px 0;font-size:15px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--line-strong);display:inline-block}
 .dot.on{background:var(--ok)}
@@ -224,12 +227,12 @@ h2{font-size:21px;font-weight:700}
 
 /* ===== alibi ===== */
 .al{display:grid;gap:5px;margin-bottom:12px}
-.al-head,.al-row{display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center}
+.al-head,.al-row{display:grid;grid-template-columns:58px 1fr;gap:6px;align-items:center}
 .al-pm{font:700 11px var(--font-b);color:var(--muted);text-align:center}
 .al-hours{display:grid;grid-template-columns:repeat(var(--T),1fr)}
 .al-hours span{font:700 12px var(--font-d);text-align:center;color:var(--muted)}
-.al-who{display:flex;align-items:center;gap:3px}
-.al-who .tok{width:30px;height:30px;font-size:18px;flex:none}
+.al-who{display:flex;flex-direction:column;align-items:center;gap:1px}
+.al-who .tok{width:42px;height:42px;font-size:24px;flex:none}
 .al-who small{font:700 11px var(--font-b);color:var(--muted)}
 .al-track{position:relative;display:grid;grid-template-columns:repeat(var(--T),1fr);height:38px;border-radius:10px;background:var(--surface2);overflow:hidden}
 .al-cell{border:0;background:transparent;box-shadow:inset -1px 0 0 var(--line);cursor:pointer;padding:0}
@@ -239,7 +242,7 @@ h2{font-size:21px;font-weight:700}
 .clues.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .al-c .cin{gap:4px}
 .al-c .st{display:flex;flex-direction:column;gap:3px;flex:none}
-.al-c .tok{width:22px;height:22px;font-size:13px;box-shadow:inset 0 0 0 2px var(--c)}
+.al-c .tok{width:30px;height:30px;font-size:18px;box-shadow:inset 0 0 0 2px var(--c)}
 .alsv{display:block;flex:1;min-width:0;color:var(--muted);line-height:0}
 .alsv svg{width:100%;height:auto;display:block}
 
@@ -1747,7 +1750,7 @@ function faceSVG(f, size) {
     (f.glasses ? '' : '<circle cx="25.5" cy="35" r="1.7" fill="#2b2733"/><circle cx="38.5" cy="35" r="1.7" fill="#2b2733"/>') + (f.glasses === 1 ? '<circle cx="25" cy="35" r="1.3" fill="#2b2733"/><circle cx="39" cy="35" r="1.3" fill="#2b2733"/>' : '') +
     `<path d="M27 ${f.beard ? 45 : 44}q5 3.4 10 0" stroke="${f.beard ? '#fff' : '#9a4d3a'}" stroke-width="1.6" fill="none" stroke-linecap="round"/>` + glassSVG(f.glasses) + hatSVG(f.hat) + '</svg>';
 }
-const bareHead = (hc) => `<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="38" rx="17" ry="19" fill="#E2A97E"/><path d="M13 30c0-22 38-22 38 0v6c-4-6-8-9-19-9s-15 3-19 9z" fill="${hc || '#9a9ab0'}"/></svg>`;
+const bareHead = (hc) => `<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="38" rx="17" ry="19" fill="#E2A97E"/><path d="M13 30c0-22 38-22 38 0v6c-4-6-8-9-19-9s-15 3-19 9z" fill="${hc || '#9a9ab0'}"/><circle cx="32" cy="38" r="12" fill="rgba(255,255,255,.62)"/><text x="32" y="44" font-size="18" font-weight="800" text-anchor="middle" fill="#5B4E86">?</text></svg>`;
 const beardIcon = '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="34" rx="17" ry="19" fill="#E2A97E"/><path d="M15 38c2 22 32 22 34 0-4 8-10 11-17 11s-13-3-17-11z" fill="#4a3322"/></svg>';
 function atomIcon(a) {
   if (a.attr === 'hair') return bareHead(HAIRC[a.v]);
@@ -1760,14 +1763,14 @@ const BARE = { hair: (v) => HAIRN[v] + ' hair', hat: (v) => ['', 'cap', 'top hat
 const atomTxt = (a) => NOUN[a.attr](a.v); const bareTxt = (a) => BARE[a.attr](a.v);
 function lnClueText(c) {
   switch (c.k) {
-    case 'has': return 'Has ' + atomTxt(c); case 'not': return 'Has no ' + bareTxt(c);
-    case 'any': return 'Wears ' + (c.attr === 'hat' ? 'a hat' : 'glasses'); case 'none': return 'Wears no ' + (c.attr === 'hat' ? 'hat' : 'glasses');
-    case 'or': return 'Has ' + atomTxt(c.a) + ' or ' + atomTxt(c.b); case 'neither': return 'Has neither ' + atomTxt(c.a) + ' nor ' + atomTxt(c.b);
-    case 'acc': return 'Has exactly ' + c.n + (c.n === 1 ? ' accessory' : ' accessories') + ' (hat, glasses, beard)';
-    case 'rowCnt': return 'In their row, exactly ' + c.n + ' people have ' + atomTxt(c); case 'colCnt': return 'In their column, exactly ' + c.n + ' people have ' + atomTxt(c);
-    case 'dir': return 'Someone with ' + atomTxt(c) + ' stands directly ' + ({ up: 'above', down: 'below', left: 'to the left of', right: 'to the right of' })[c.dir] + ' them'; case 'twin': return 'Has the same hair colour as a neighbour';
-    case 'col': return 'Is in column ' + (c.v + 1); case 'row': return 'Is in row ' + (c.v + 1);
-    case 'next': return 'Stands next to someone with ' + atomTxt(c); default: return 'Does not stand next to anyone with ' + atomTxt(c);
+    case 'has': return 'The culprit has ' + atomTxt(c); case 'not': return 'The culprit has no ' + bareTxt(c);
+    case 'any': return 'The culprit wears ' + (c.attr === 'hat' ? 'a hat' : 'glasses'); case 'none': return 'The culprit wears no ' + (c.attr === 'hat' ? 'hat' : 'glasses');
+    case 'or': return 'The culprit has ' + atomTxt(c.a) + ' or ' + atomTxt(c.b); case 'neither': return 'The culprit has neither ' + atomTxt(c.a) + ' nor ' + atomTxt(c.b);
+    case 'acc': return 'The culprit has exactly ' + c.n + (c.n === 1 ? ' accessory' : ' accessories') + ' (hat, glasses, beard)';
+    case 'rowCnt': return 'In the culprit’s row, exactly ' + c.n + ' people have ' + atomTxt(c); case 'colCnt': return 'In the culprit’s column, exactly ' + c.n + ' people have ' + atomTxt(c);
+    case 'dir': return 'Someone with ' + atomTxt(c) + ' stands directly ' + ({ up: 'above', down: 'below', left: 'to the left of', right: 'to the right of' })[c.dir] + ' the culprit'; case 'twin': return 'The culprit has the same hair colour as a neighbour';
+    case 'col': return 'The culprit is in column ' + (c.v + 1); case 'row': return 'The culprit is in row ' + (c.v + 1);
+    case 'next': return 'The culprit stands next to someone with ' + atomTxt(c); default: return 'The culprit does not stand next to anyone with ' + atomTxt(c);
   }
 }
 function lnMini(hi) {
@@ -1776,20 +1779,20 @@ function lnMini(hi) {
 function lnClueCard(c) {
   const ic = (a) => h('span', { class: 'lnic', html: atomIcon(a) }); const yes = () => h('i', { class: 'yes' }, '\u2713'); const no = () => h('i', { class: 'no' }, '\u2715'); let inner, cap;
   switch (c.k) {
-    case 'has': inner = [ic(c), yes()]; cap = cc(atomTxt(c)); break;
-    case 'not': inner = [ic(c), no()]; cap = 'No ' + bareTxt(c); break;
-    case 'any': inner = [ic({ attr: c.attr, v: 1 }), ic({ attr: c.attr, v: 2 }), yes()]; cap = c.attr === 'hat' ? 'Wears a hat' : 'Wears glasses'; break;
-    case 'none': inner = [ic({ attr: c.attr, v: 1 }), ic({ attr: c.attr, v: 2 }), no()]; cap = c.attr === 'hat' ? 'No hat at all' : 'No glasses at all'; break;
-    case 'or': inner = [ic(c.a), h('i', { class: 'orw' }, 'or'), ic(c.b)]; cap = 'One of these'; break;
-    case 'neither': inner = [ic(c.a), ic(c.b), no()]; cap = 'Neither of these'; break;
-    case 'col': inner = [h('span', { class: 'lnmini', html: lnMini({ col: c.v }) })]; cap = 'Column ' + (c.v + 1) + ' of 5'; break;
-    case 'row': inner = [h('span', { class: 'lnmini', html: lnMini({ row: c.v }) })]; cap = 'Row ' + (c.v + 1) + ' of 4'; break;
-    case 'acc': inner = [h('span', { class: 'accrow' }, ic({ attr: 'hat', v: 1 }), ic({ attr: 'glasses', v: 1 }), ic({ attr: 'beard', v: 1 })), h('i', { class: 'accn' }, c.n)]; cap = c.n + ' of hat, glasses, beard'; break;
-    case 'rowCnt': case 'colCnt': inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, c.k === 'rowCnt' ? '\u2194' : '\u2195'), ic(c), h('i', { class: 'accn sm' }, c.n)]; cap = (c.k === 'rowCnt' ? 'Their row' : 'Their column') + ': exactly ' + c.n; break;
-    case 'dir': { const cell = (k) => h('i', { class: 'dc' + (k === 'u' ? ' on' : '') }); const pos = { up: 'u', down: 'd', left: 'l', right: 'r' }[c.dir]; inner = h('span', { class: 'dir3' }, ['u', 'l', 'm', 'r', 'd'].map((k) => (k === 'm' ? h('i', { class: 'dc me', html: bareHead() }) : k === pos ? h('i', { class: 'dc tgt k' + k }, ic(c)) : h('i', { class: 'dc k' + k })))); cap = 'Right ' + ({ up: 'above', down: 'below', left: 'left of', right: 'right of' })[c.dir] + ' them'; break; }
-    case 'twin': inner = [h('span', { class: 'lnic', html: bareHead('#B9B3D3') }), h('i', { class: 'eq' }, '='), h('span', { class: 'lnic', html: bareHead('#B9B3D3') })]; cap = 'Same hair as a neighbour'; break;
-    case 'next': inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, '\u2194'), ic(c)]; cap = 'Next to ' + atomTxt(c); break;
-    default: inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, '\u2194'), ic(c), no()]; cap = 'Not next to ' + atomTxt(c);
+    case 'has': inner = [ic(c), yes()]; cap = 'Culprit: ' + atomTxt(c); break;
+    case 'not': inner = [ic(c), no()]; cap = 'Culprit: no ' + bareTxt(c); break;
+    case 'any': inner = [ic({ attr: c.attr, v: 1 }), ic({ attr: c.attr, v: 2 }), yes()]; cap = c.attr === 'hat' ? 'Culprit wears a hat' : 'Culprit wears glasses'; break;
+    case 'none': inner = [ic({ attr: c.attr, v: 1 }), ic({ attr: c.attr, v: 2 }), no()]; cap = c.attr === 'hat' ? 'Culprit: no hat at all' : 'Culprit: no glasses at all'; break;
+    case 'or': inner = [ic(c.a), h('i', { class: 'orw' }, 'or'), ic(c.b)]; cap = 'Culprit has one of these'; break;
+    case 'neither': inner = [ic(c.a), ic(c.b), no()]; cap = 'Culprit has neither'; break;
+    case 'col': inner = [h('span', { class: 'lnmini', html: lnMini({ col: c.v }) })]; cap = 'Culprit: column ' + (c.v + 1) + ' of 5'; break;
+    case 'row': inner = [h('span', { class: 'lnmini', html: lnMini({ row: c.v }) })]; cap = 'Culprit: row ' + (c.v + 1) + ' of 4'; break;
+    case 'acc': inner = [h('span', { class: 'accrow' }, ic({ attr: 'hat', v: 1 }), ic({ attr: 'glasses', v: 1 }), ic({ attr: 'beard', v: 1 })), h('i', { class: 'accn' }, c.n)]; cap = 'Culprit has ' + c.n + ' of hat, glasses, beard'; break;
+    case 'rowCnt': case 'colCnt': inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, c.k === 'rowCnt' ? '\u2194' : '\u2195'), ic(c), h('i', { class: 'accn sm' }, c.n)]; cap = (c.k === 'rowCnt' ? 'Culprit\u2019s row' : 'Culprit\u2019s column') + ': exactly ' + c.n; break;
+    case 'dir': { const cell = (k) => h('i', { class: 'dc' + (k === 'u' ? ' on' : '') }); const pos = { up: 'u', down: 'd', left: 'l', right: 'r' }[c.dir]; inner = h('span', { class: 'dir3' }, ['u', 'l', 'm', 'r', 'd'].map((k) => (k === 'm' ? h('i', { class: 'dc me', html: bareHead() }) : k === pos ? h('i', { class: 'dc tgt k' + k }, ic(c)) : h('i', { class: 'dc k' + k })))); cap = 'Stands ' + ({ up: 'above', down: 'below', left: 'left of', right: 'right of' })[c.dir] + ' the culprit'; break; }
+    case 'twin': inner = [h('span', { class: 'lnic', html: bareHead('#B9B3D3') }), h('i', { class: 'eq' }, '='), h('span', { class: 'lnic', html: bareHead('#B9B3D3') })]; cap = 'Culprit: same hair as a neighbour'; break;
+    case 'next': inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, '\u2194'), ic(c)]; cap = 'Culprit: next to ' + atomTxt(c); break;
+    default: inner = [h('span', { class: 'lnic', html: bareHead() }), h('i', { class: 'arw' }, '\u2194'), ic(c), no()]; cap = 'Culprit: not next to ' + atomTxt(c);
   }
   const txt = lnClueText(c);
   return h('div', { class: 'clue cp ln-c', role: 'img', 'aria-label': txt, title: txt }, h('div', { class: 'cin' }, inner), h('span', { class: 'cap' }, cap));
@@ -1936,7 +1939,7 @@ const GAMES = {
   alibi: { name: 'Alibi', em: '\u{1F50E}', tc: '#7A4FD0', blurb: 'Who was at the party, and when?', how: 'Tap an hour in a guest\u2019s row to set when they arrived. The bar shows how long they stayed. Make every clue true.', mount: mountAlibi, levels: [3, 4, 4, 5], gen: (r, l) => LD2.genAlibi(r, l) },
   bridge: { name: 'Bridges', em: '\u{1F309}', tc: '#0E9AA7', blurb: 'Lay one bridge over every tile', how: 'Drag from island 1 to lay a single bridge that covers every tile and visits the islands in number order. Drag backward to undo.', mount: mountBridge, levels: [1, 2, 2, 3], gen: (r, l) => LD3.genZip(r, l) },
   dogs: { name: 'Pup Parade', em: '\u{1F436}', tc: '#E39A2D', blurb: 'Line the dogs up by the rules', how: 'Drag a dog from the kennel into a line-up spot, or tap one then a spot. Rearrange until every rule card is met. Green ticks show the rules you have satisfied.', mount: mountDogs, levels: [1, 2, 2, 3], gen: (r, l) => LD3.genDogs(r, l) },
-  lineup: { name: 'Lineup', em: '\u{1F575}\uFE0F', tc: '#3A6FD8', blurb: 'Find the culprit from tricky clues', how: 'Use the clues to rule faces out, or switch to Accuse and name your suspect straight away. When only one face is left, accuse them. A wrong accusation costs 8 seconds.', mount: mountLineup, levels: [2, 3, 3], gen: (r, l) => LD3.genLineup(r, l) },
+  lineup: { name: 'Lineup', em: '\u{1F575}\uFE0F', tc: '#3A6FD8', blurb: 'Find the culprit from tricky clues', how: 'Every clue describes the culprit. Rule out any face that breaks one, or switch to Accuse and name your suspect straight away. When only one face is left, accuse them. A wrong accusation costs 8 seconds.', mount: mountLineup, levels: [2, 3, 3], gen: (r, l) => LD3.genLineup(r, l) },
   untangle: { name: 'Untangle', em: '\u{1F578}\uFE0F', tc: '#7A5CF0', blurb: 'Drag nodes until no lines cross', how: 'Drag the glowing nodes around. Red lines are still crossing. Untangle them all.', mount: mountUntangle, levels: [2, 2, 3], gen: (r, l) => LD3.genUntangle(r, l) },
   paint: { name: 'Layers', em: '\u{1F3A8}', tc: '#FF5A5F', blurb: 'Restack the paper to match', how: 'Tap a shape to bring it to the front, or switch to Send to back. Restack the layers until your picture matches the target.', mount: mountPaint, levels: [1, 2, 2, 3], gen: (r, l) => LD3.paintPrep(LD3.genPaint(r, l)) },
   hues: { name: 'Hues', em: '\u{1F308}', tc: '#C646E8', blurb: 'Swap tiles to rebuild the gradient', how: 'The colours form a smooth gradient between the four corners. Tap two tiles to swap them. Tiles with a dot are fixed.', mount: mountHues, levels: [1, 2, 3], gen: (r, l) => LD3.genHues(r, l) },
@@ -2198,7 +2201,7 @@ function dialog(msg, ok, cancel) {
 const confirmQuit = (fn) => dialog('Leave this puzzle? Your time will be lost.', 'Leave', 'Keep playing').then((v) => { if (v) fn(); });
 function promptName(current) {
   return new Promise((res) => {
-    const inp = h('input', { class: 'field', placeholder: 'Your name', maxlength: 18, autocomplete: 'off', value: current || '' });
+    const inp = h('input', { class: 'field sm', placeholder: 'Your name', maxlength: 18, autocomplete: 'off', value: current || '' });
     const close = (v) => { m.remove(); res(v); };
     const m = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' }, h('div', { class: 'box' },
       h('p', null, 'Add your name so others can see it on the board.'), inp,
@@ -2487,25 +2490,29 @@ function home() {
   App.screen = 'home'; const date = todayStr(); const dp = dailyPick(date); const dg = dp.gid;
   const recLine = h('div', { class: 'rec' }); const friendBtn = h('button', { class: 'btn rival', onclick: () => lobby() }, 'Race a friend');
   const dailyBtn = h('button', { class: 'btn you block', onclick: () => startDaily() }, ''); const streakEl = h('span', { class: 'streak' });
-  const nameRow = h('div', { class: 'muted small', style: 'margin:6px 0 10px;cursor:pointer', onclick: () => editName() });
-  function editName() { promptName(App.rec.name || '').then((nm) => { if (nm != null) { App.rec.name = nm; saveRec(); } refresh(); }); }
+  const nameInput = h('input', { class: 'field sm', style: 'flex:1;min-width:0;width:auto', placeholder: 'Your name', maxlength: 18, autocomplete: 'off', value: App.rec.name || '' });
+  const nameNote = h('div', { class: 'muted small', style: 'margin-top:6px' });
+  const nameSave = () => { const v = nameInput.value.trim().slice(0, 18); App.rec.name = v; saveRec(); nameNote.textContent = v ? 'Saved \u2014 this is what others see on the board.' : 'No name set \u2014 you\u2019ll show as \u201CPlayer\u201D.'; };
+  const nameField = h('div', { class: 'namefield' }, h('label', { class: 'muted small', for: 'nmIn' }, 'Your name on the leaderboard'), h('div', { style: 'display:flex;gap:8px;margin-top:4px' }, nameInput, h('button', { class: 'btn ghost sm', style: 'flex:none', onclick: nameSave }, 'Save')), nameNote);
+  nameInput.id = 'nmIn'; nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') nameSave(); });
   function refresh() {
     if (App.screen !== 'home') return; const r = App.rec;
     recLine.textContent = App.room ? 'Your Elo ' + r.elo.r + (r.elo.n ? ' \u00B7 ' + r.elo.n + (r.elo.n === 1 ? ' race' : ' races') : '') : 'Live races need this page opened signed in on claude.ai';
     friendBtn.disabled = !App.room;
     const d = r.daily[todayStr()]; dailyBtn.textContent = d ? 'Today\u2019s time ' + fmt(d.s) + '. Play again, unranked' : 'Play today\u2019s puzzle'; dailyBtn.className = 'btn block ' + (d ? 'ghost' : 'you');
     const s = streak(); streakEl.textContent = s ? s + ' day streak' : '';
-    const shared = App.db && App.uid !== 'local'; nameRow.hidden = !shared;
-    nameRow.textContent = !shared ? '' : r.name ? 'Playing as ' + r.name + ' \u00B7 change' : 'Add your name so others can see it on the board \u2192';
+    const shared = App.db && App.uid !== 'local'; nameField.hidden = !shared;
+    if (shared && document.activeElement !== nameInput) nameInput.value = r.name || '';
   }
   const hero = h('section', { class: 'hero', 'aria-label': 'Race a friend' },
     h('div', { class: 'lanes', 'aria-hidden': 'true' }, h('div', { class: 'lane-row' }, h('span', null, 'You'), h('div', { class: 'lane you', style: '--to:78%' }, h('i'))), h('div', { class: 'lane-row' }, h('span', null, 'Friend'), h('div', { class: 'lane rival', style: '--to:61%' }, h('i')))),
     h('h1', null, 'Race a friend on puzzles you pick'), h('div', { class: 'cta-row' }, friendBtn, h('button', { class: 'btn you', onclick: () => startDaily() }, 'Daily puzzle')), recLine);
   const daily = h('section', { class: 'sec' }, h('h2', null, 'Today\u2019s puzzle'),
-    h('div', { class: 'card' }, h('div', { class: 'today' }, h('span', { class: 'gem', style: '--tc:' + GAMES[dg].tc }, GAMES[dg].em), h('div', null, h('b', null, GAMES[dg].name), h('span', { class: 'muted small', style: 'display:block' }, GAMES[dg].blurb + '. A new puzzle every day.'))), dailyBtn, nameRow, boardView()));
+    h('div', { class: 'card' }, h('div', { class: 'today' }, h('span', { class: 'gem', style: '--tc:' + GAMES[dg].tc }, GAMES[dg].em), h('div', null, h('b', null, GAMES[dg].name), h('span', { class: 'muted small', style: 'display:block' }, GAMES[dg].blurb + '. A new puzzle every day.'))), dailyBtn));
+  const leaderboard = h('section', { class: 'sec' }, h('h2', null, 'Leaderboard'), h('div', { class: 'card' }, nameField, boardView()));
   const tiles = h('div', { class: 'tiles' }, ...GAME_IDS.map((id) => h('button', { class: 'tile', onclick: () => startRandom(id) }, h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em), h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, GAMES[id].blurb)))),
     h('button', { class: 'tile wide', onclick: () => startSurprise() }, h('div', null, h('b', null, 'Surprise me'), h('span', { class: 'd' }, 'A random puzzle from a random game.'))));
-  view(h('div', { class: 'wrap' }, h('div', { class: 'brand' }, h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i')), h('b', null, 'Wits\u2019 End'), streakEl), hero, daily, h('section', { class: 'sec' }, h('h2', null, 'Keep playing'), tiles)));
+  view(h('div', { class: 'wrap' }, h('div', { class: 'brand' }, h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i')), h('b', null, 'Wits\u2019 End'), streakEl), hero, daily, leaderboard, h('section', { class: 'sec' }, h('h2', null, 'Keep playing'), tiles)));
   refresh();
   const f = () => { if (App.screen !== 'home') { App.listeners = App.listeners.filter((x) => x !== f); return; } refresh(); }; App.listeners.push(f);
 }
