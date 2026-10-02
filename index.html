@@ -154,18 +154,23 @@ h2{font-size:21px;font-weight:700}
 .stage{padding:10px}
 .jgrid{display:grid;grid-template-columns:minmax(0,1fr) clamp(38px,11vw,50px) minmax(0,var(--bf,1.1fr));gap:8px;align-items:start}
 .tray{display:flex;flex-direction:column;gap:6px}
-.slot{width:100%;aspect-ratio:1;border:0;border-radius:50%;background:var(--surface2);display:grid;place-items:center;cursor:pointer;padding:0}
+.slot{width:100%;aspect-ratio:1;border:0;border-radius:50%;background:var(--surface2);display:grid;place-items:center;cursor:grab;padding:0;touch-action:none}
+.slot:active{cursor:grabbing}
 .slot.used{opacity:.28}
 .slot.sel{box-shadow:0 0 0 3px var(--ink)}
+.slot.dragsrc{opacity:.35}
 .tok{--c:#888;display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 3px var(--c);font-size:clamp(18px,5.4vw,26px);line-height:1}
 .tok.sel{box-shadow:inset 0 0 0 3px var(--c),0 0 0 3px var(--ink)}
 .jb{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:4px}
-.cell{position:relative;aspect-ratio:1;border:0;border-radius:12px;padding:0;cursor:pointer;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.cell{position:relative;aspect-ratio:1;border:0;border-radius:12px;padding:0;cursor:pointer;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35);touch-action:none}
 .cell .tok{width:68%;height:68%;font-size:clamp(18px,6vw,32px);box-shadow:inset 0 0 0 3px var(--c),0 2px 6px rgba(0,0,0,.28)}
 .cell .tl{position:absolute;left:6px;bottom:3px;font:700 9px var(--font-b);color:rgba(0,0,0,.55)}
 .cell.jungle .tl,.cell.rock .tl,.cell.mud .tl{color:rgba(255,255,255,.9)}
 .cell .palm{position:absolute;right:4px;top:2px;font-size:clamp(11px,3.4vw,18px)}
 .cell.tgt{outline:2.5px dashed var(--ink);outline-offset:-5px}
+.cell.dragsrc{opacity:.35}
+.cell.droptgt{outline:2.5px solid var(--rival);outline-offset:-3px}
+.jg-ghost{position:fixed;left:0;top:0;width:44px;height:44px;pointer-events:none;transform:translate(-50%,-50%) scale(1.2);z-index:999;display:grid;place-items:center;font-size:28px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .cell.grass,.sw-t.grass{background:repeating-linear-gradient(115deg,#D7EE78 0 7px,#C4E05A 7px 13px)}
 .cell.jungle,.sw-t.jungle{background:radial-gradient(circle at 25% 30%,#58B04C 0 18%,transparent 19%),radial-gradient(circle at 72% 70%,#2F8A3D 0 22%,transparent 23%),#3F9A40}
 .cell.rock,.sw-t.rock{background:radial-gradient(circle at 30% 35%,#B9B9C2 0 22%,transparent 23%),radial-gradient(circle at 70% 70%,#85858F 0 26%,transparent 27%),#9C9CA6}
@@ -234,7 +239,8 @@ h2{font-size:21px;font-weight:700}
 .al-who{display:flex;flex-direction:column;align-items:center;gap:1px}
 .al-who .tok{width:42px;height:42px;font-size:24px;flex:none}
 .al-who small{font:700 11px var(--font-b);color:var(--muted)}
-.al-track{position:relative;display:grid;grid-template-columns:repeat(var(--T),1fr);height:38px;border-radius:10px;background:var(--surface2);overflow:hidden}
+.al-track{position:relative;display:grid;grid-template-columns:repeat(var(--T),1fr);height:38px;border-radius:10px;background:var(--surface2);overflow:hidden;touch-action:none;cursor:grab}
+.al-track:active{cursor:grabbing}
 .al-cell{border:0;background:transparent;box-shadow:inset -1px 0 0 var(--line);cursor:pointer;padding:0}
 .al-cell:last-of-type{box-shadow:none}
 .al-bar{position:absolute;top:4px;bottom:4px;left:calc(var(--s,0)/var(--T)*100% + 2px);width:calc(var(--d)/var(--T)*100% - 4px);border-radius:8px;background:var(--c);display:none;align-items:center;justify-content:center;color:#fff;font:800 12px var(--font-d);pointer-events:none;box-shadow:0 2px 5px rgba(0,0,0,.2)}
@@ -342,7 +348,7 @@ body{overflow-x:hidden}
 .ring{position:absolute;left:50%;top:44%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:4px solid #FFD23F;opacity:0;animation:ringb .9s ease-out .05s both}
 .ring.r2{border-color:#fff;animation-delay:.2s}
 @keyframes ringb{0%{opacity:.9;transform:scale(.3)}100%{opacity:0;transform:scale(11)}}
-.badge{position:relative;z-index:2;text-align:center;color:#fff;background:rgba(18,14,38,.92);border-radius:24px;padding:14px 28px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35),0 0 0 2px rgba(255,210,63,.6);animation:badge .6s cubic-bezier(.2,1.5,.4,1) .12s both}
+.badge{position:relative;z-index:2;text-align:center;color:#fff;background:rgba(18,14,38,.92);border-radius:24px;padding:14px 28px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35),0 0 0 2px rgba(255,210,63,.6);animation:badge .6s cubic-bezier(.2,1.5,.4,1) .12s both;pointer-events:auto}
 .badge svg{width:54px;height:54px;display:block;margin:0 auto 4px}
 .badge .cc{fill:none;stroke:#FFD23F;stroke-width:3;stroke-dasharray:145;stroke-dashoffset:145;animation:draw .6s ease .3s forwards}
 .badge .ck{fill:none;stroke:#fff;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:40;stroke-dashoffset:40;animation:draw .35s ease .7s forwards}
@@ -390,7 +396,8 @@ body{overflow-x:hidden}
 .neg.two{display:inline-flex;gap:2px;padding:2px 3px}
 .lnmini svg{width:48px;height:38px;display:block}
 .lng{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;max-width:420px;margin:0 auto}
-.lnf{position:relative;border:0;padding:0;background:none;border-radius:14px;cursor:pointer;line-height:0;transition:transform .2s,filter .3s,opacity .3s;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.lnf{position:relative;border:0;padding:0;background:none;border-radius:14px;cursor:grab;line-height:0;transition:transform .2s,filter .3s,opacity .3s;box-shadow:0 3px 8px rgba(0,0,0,.3);touch-action:none}
+.lnf.dragging{z-index:4;transform:scale(1.14);box-shadow:0 10px 20px rgba(0,0,0,.4)}
 .lnf svg{width:100%;height:auto;display:block;border-radius:14px}
 .lnf.out{box-shadow:0 0 0 2.5px #E5484D,0 3px 8px rgba(0,0,0,.3)}
 .lnf.out::after{content:"\2715";position:absolute;top:-6px;right:-6px;width:21px;height:21px;border-radius:50%;background:#E5484D;color:#fff;display:grid;place-items:center;font:800 12px var(--font-d);line-height:1;box-shadow:0 0 0 2px #fff}
@@ -470,6 +477,7 @@ body{overflow-x:hidden}
 .ln-c .no{background:#E5484D}
 .ln-seg{margin:0 0 10px}
 .ln-seg button{min-width:112px}
+.ln-seg button.droptgt{box-shadow:0 0 0 3px var(--ok);background:var(--ok);color:#fff}
 .lng.accusing .lnf:not(.out){cursor:crosshair}
 .lng.accusing .lnf:not(.out):hover{transform:translateY(-2px)}
 .lnf.last{animation:lastpulse 1.2s ease-in-out infinite}
@@ -1405,10 +1413,11 @@ function mountJungle(root, ctx) {
   }
   const clueEls = clues.map(clueCard); const cluesEl = h('div', { class: 'clues' }, clueEls);
 
+  let pointerHandled = false;
   const board = h('div', { class: 'jb', style: '--cols:' + P.cols });
-  const cellEls = P.terr.map((t, i) => { const b = h('button', { class: 'cell ' + t, 'data-i': i, onclick: () => tapCell(i) }); board.append(b); return b; });
+  const cellEls = P.terr.map((t, i) => { const b = h('button', { class: 'cell ' + t, 'data-i': i, onclick: () => { if (pointerHandled) return; tapCell(i); } }); b.addEventListener('pointerdown', (ev) => { const occ = occupant(i); if (occ >= 0) startDrag(ev, occ, () => tapCell(i)); }); board.append(b); return b; });
   const tray = h('div', { class: 'tray' });
-  const trayEls = P.animals.map((_, a) => { const b = h('button', { class: 'slot', 'aria-label': info(a).name, onclick: () => tapTray(a) }, tok(a)); tray.append(b); return b; });
+  const trayEls = P.animals.map((_, a) => { const b = h('button', { class: 'slot', 'aria-label': info(a).name, onclick: () => { if (pointerHandled) return; tapTray(a); } }, tok(a)); b.addEventListener('pointerdown', (ev) => startDrag(ev, a, () => tapTray(a))); tray.append(b); return b; });
   const jgridEl = h('div', { class: 'jgrid', style: '--bf:' + (P.cols >= 3 ? 1.5 : 1.1) + 'fr' }, cluesEl, tray, board); root.append(jgridEl);
 
   const occupant = (i) => placed.indexOf(i);
@@ -1434,6 +1443,35 @@ function mountJungle(root, ctx) {
     if (occ === sel) { placed[sel] = -1; sel = null; draw(); return; }
     const from = placed[sel]; placed[sel] = i; if (occ >= 0) placed[occ] = from;
     sel = null; draw();
+  }
+  function placeAt(a, destCell) {
+    if (destCell == null) { placed[a] = -1; sel = null; draw(); return; }
+    const occ = occupant(destCell); if (occ === a) { sel = null; draw(); return; }
+    const from = placed[a]; placed[a] = destCell; if (occ >= 0) placed[occ] = from;
+    sel = null; draw();
+  }
+  function dropTargetAt(x, y) {
+    const el = document.elementFromPoint(x, y); if (!el) return undefined;
+    const cell = el.closest && el.closest('.cell'); if (cell) return +cell.getAttribute('data-i');
+    if (el.closest && el.closest('.tray')) return null;
+    return undefined;
+  }
+  let ghost = null;
+  function placeGhost(x, y) { if (ghost) ghost.style.cssText = `left:${x}px;top:${y}px`; }
+  function startDrag(ev, a, plainTap) {
+    if (!ctx.active()) return; const d = { moved: false }; const el = ev.currentTarget; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    ghost = h('div', { class: 'jg-ghost' }, info(a).em); document.body.append(ghost); placeGhost(ev.clientX, ev.clientY);
+    el.classList.add('dragsrc');
+    const move_ = (e) => { d.moved = true; placeGhost(e.clientX, e.clientY); const t = dropTargetAt(e.clientX, e.clientY); cellEls.forEach((c) => c.classList.remove('droptgt')); if (typeof t === 'number') cellEls[t].classList.add('droptgt'); };
+    const up = (e) => {
+      el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel);
+      el.classList.remove('dragsrc'); cellEls.forEach((c) => c.classList.remove('droptgt')); if (ghost) { ghost.remove(); ghost = null; }
+      if (d.moved) { const t = dropTargetAt(e.clientX, e.clientY); if (t !== undefined) placeAt(a, t); else draw(); }
+      else plainTap();
+      pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0);
+    };
+    const cancel = () => { el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel); el.classList.remove('dragsrc'); cellEls.forEach((c) => c.classList.remove('droptgt')); if (ghost) { ghost.remove(); ghost = null; } };
+    el.addEventListener('pointermove', move_); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', cancel);
   }
   draw();
   return { destroy() {}, reveal: () => { sol.forEach((c, a) => { placed[a] = c; }); sel = null; draw(); }, cheat: () => { sol.forEach((c, a) => { placed[a] = c; }); sel = null; draw(); }, celebrate: () => jgridEl.classList.add('won'), puzzle: { P, clues, sol },
@@ -1505,11 +1543,20 @@ function mountAlibi(root, ctx) {
   /* timeline board */
   const board = h('div', { class: 'al', style: '--T:' + T });
   board.append(h('div', { class: 'al-head' }, h('span', { class: 'al-pm' }, 'pm'), h('div', { class: 'al-hours' }, ...LD.range(T).map((t) => h('span', null, hourLabel(t))))));
-  const bars = [], tracks = [];
+  const bars = [], tracks = []; let pointerHandled = false;
   for (let a = 0; a < nS; a++) {
     const bar = h('div', { class: 'al-bar', style: '--c:' + ALC[a].c + ';--d:' + dur[a] }, h('span', null, dur[a] + 'h'));
-    const track = h('div', { class: 'al-track' }, ...LD.range(T).map((t) => h('button', { class: 'al-cell', 'aria-label': ALC[a].n + ' arrives at ' + hourLabel(t), onclick: () => place(a, t) })), bar);
+    const track = h('div', { class: 'al-track' }, ...LD.range(T).map((t) => h('button', { class: 'al-cell', 'aria-label': ALC[a].n + ' arrives at ' + hourLabel(t), onclick: () => { if (pointerHandled) return; place(a, t); } })), bar);
     board.append(h('div', { class: 'al-row' }, h('div', { class: 'al-who' }, tk(a), h('small', null, dur[a] + 'h')), track)); bars.push(bar); tracks.push(track);
+    let dragging = false, moved = false;
+    track.addEventListener('pointerdown', (ev) => { if (!ctx.active()) return; dragging = true; moved = false; try { track.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ } });
+    track.addEventListener('pointermove', (ev) => { if (!dragging || !ctx.active()) return; moved = true; dragSet(a, ev.clientX, track); });
+    const up = () => { if (dragging && moved) { pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0); } dragging = false; };
+    track.addEventListener('pointerup', up); track.addEventListener('pointercancel', up);
+  }
+  function dragSet(a, clientX, track) {
+    const r = track.getBoundingClientRect(); const frac = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    const t = Math.round(frac * (T - 1)); st[a] = Math.min(t, T - dur[a]); draw();
   }
   const clueEls = clues.map((c) => {
     const two = c.b != null; const txt = alText(P, c);
@@ -1805,11 +1852,11 @@ function mountLineup(root, ctx) {
   const P = ctx.puzzle(); const N = P.faces.length; const out = new Set(); let won = false; let mode = 'rule';
   const clues = h('div', { class: 'clues lnclues' }, P.clues.map(lnClueCard));
   const grid = h('div', { class: 'lng' });
-  const tiles = P.faces.map((f, i) => { const b = h('button', { class: 'lnf', 'aria-label': 'Suspect ' + (i + 1), html: faceSVG(f, 64), onclick: () => tap(i) }); grid.append(b); return b; });
+  const tiles = P.faces.map((f, i) => { const b = h('button', { class: 'lnf', 'aria-label': 'Suspect ' + (i + 1), html: faceSVG(f, 64), onclick: () => { if (pointerHandled) return; tap(i); } }); b.addEventListener('pointerdown', (ev) => startDrag(ev, i)); grid.append(b); return b; });
   const rule = h('button', { 'aria-pressed': 'true', onclick: () => setMode('rule') }, 'Rule out \u2715'); const acc = h('button', { 'aria-pressed': 'false', onclick: () => setMode('accuse') }, 'Accuse \u261D');
   const note = h('div', { class: 'ln-note' }, '');
   const cta = h('button', { class: 'btn you block accuse-cta hide', onclick: () => { const q = LD.range(N).find((z) => !out.has(z)); if (q != null) accuse(q); } }, '\u261D  Only one left: accuse them!');
-  const hint = () => (mode === 'rule' ? 'Tap faces that break a clue to mark them with a red \u2715. They stay in full colour so you can still count them. Or switch to Accuse.' : 'Tap the culprit. A wrong accusation costs 8 seconds.');
+  const hint = () => (mode === 'rule' ? 'Tap faces that break a clue to mark them with a red \u2715, or drag one onto Accuse to name them straight away. They stay in full colour so you can still count them.' : 'Tap the culprit, or drag their face onto Accuse. A wrong accusation costs 8 seconds.');
   note.textContent = hint();
   function setMode(m) { mode = m; rule.setAttribute('aria-pressed', String(m === 'rule')); acc.setAttribute('aria-pressed', String(m === 'accuse')); grid.classList.toggle('accusing', m === 'accuse'); note.textContent = hint(); }
   root.append(clues, h('div', { class: 'seg ln-seg' }, rule, acc), grid, cta, note);
@@ -1829,6 +1876,25 @@ function mountLineup(root, ctx) {
     if (mode === 'rule') { if (out.has(i)) out.delete(i); else out.add(i); draw(); return; }
     if (out.has(i)) { out.delete(i); draw(); return; }
     accuse(i);
+  }
+  let pointerHandled = false;
+  function isOverAccuse(x, y) { const el = document.elementFromPoint(x, y); return !!el && (el === acc || acc.contains(el)); }
+  function startDrag(ev, i) {
+    if (!ctx.active() || won || out.has(i)) return; const el = ev.currentTarget; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    const sx = ev.clientX, sy = ev.clientY; let moved = false;
+    const move_ = (e) => {
+      if (!moved && Math.hypot(e.clientX - sx, e.clientY - sy) < 6) return; moved = true;
+      el.classList.add('dragging'); acc.classList.toggle('droptgt', isOverAccuse(e.clientX, e.clientY));
+    };
+    const up = (e) => {
+      el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel);
+      el.classList.remove('dragging'); acc.classList.remove('droptgt');
+      if (!moved) tap(i);
+      else if (isOverAccuse(e.clientX, e.clientY)) accuse(i);
+      pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0);
+    };
+    const cancel = () => { el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel); el.classList.remove('dragging'); acc.classList.remove('droptgt'); };
+    el.addEventListener('pointermove', move_); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', cancel);
   }
   draw();
   const reveal = () => { LD.range(N).forEach((q) => { if (q !== P.culprit) out.add(q); }); draw(); grid.classList.add('won'); tiles[P.culprit].classList.add('caught'); };
@@ -1927,7 +1993,8 @@ function mountHues(root, ctx) {
   const counter = h('span', { class: 'ln-count' }, ''); const board = h('div', { class: 'hu', style: `--cols:${cols};--rows:${rows}` });
   const tiles = colors.map((c, id) => { const t = h('button', { class: 'hu-t' + (anchors.has(id) ? ' fixed' : ''), 'aria-label': 'Colour tile' + (anchors.has(id) ? ' (fixed)' : ''), style: `width:${100 / cols}%;height:${100 / rows}%` }, h('i', { style: 'background:' + c })); board.append(t); return t; });
   root.append(h('div', { class: 'ln-hud' }, h('span', null, 'Tiles in place'), counter), board);
-  tiles.forEach((t, id) => t.addEventListener('click', () => tap(arr.indexOf(id))));
+  let pointerHandled = false, ghost = null;
+  tiles.forEach((t, id) => { t.addEventListener('click', () => { if (pointerHandled) return; tap(arr.indexOf(id)); }); t.addEventListener('pointerdown', (ev) => startDrag(ev, id)); });
   function layout() { arr.forEach((id, pos) => { const t = tiles[id]; t.style.left = (pos % cols) * 100 / cols + '%'; t.style.top = ((pos / cols) | 0) * 100 / rows + '%'; t.classList.toggle('sel', sel === pos); }); }
   function stats() { const ok = movable.filter((p) => arr[p] === p).length; counter.textContent = ok + ' / ' + movable.length; ctx.progress(ok / movable.length); if (ok === movable.length && !won) { won = true; sel = -1; layout(); ctx.solve(); } }
   function tap(pos) {
@@ -1935,22 +2002,46 @@ function mountHues(root, ctx) {
     if (sel < 0) sel = pos; else if (sel === pos) sel = -1; else { const a = arr[sel]; arr[sel] = arr[pos]; arr[pos] = a; sel = -1; }
     layout(); stats();
   }
+  function swapAt(fromPos, toPos) {
+    if (!ctx.active() || fromPos === toPos) return;
+    if (anchors.has(fromPos) || anchors.has(toPos)) { const t = tiles[arr[anchors.has(toPos) ? toPos : fromPos]]; t.classList.remove('nope'); void t.offsetWidth; t.classList.add('nope'); return; }
+    const a = arr[fromPos]; arr[fromPos] = arr[toPos]; arr[toPos] = a; sel = -1; layout(); stats();
+  }
+  function dropTileAt(x, y) { const el = document.elementFromPoint(x, y); const t = el && el.closest && el.closest('.hu-t'); if (!t) return null; const idx = tiles.indexOf(t); return idx >= 0 ? idx : null; }
+  function placeGhost(x, y) { if (ghost) ghost.style.cssText = `left:${x}px;top:${y}px`; }
+  function startDrag(ev, id) {
+    if (!ctx.active()) return; const fromPos = arr.indexOf(id); if (anchors.has(fromPos)) return;
+    const el = ev.currentTarget; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    let moved = false;
+    ghost = h('div', { class: 'hu-ghost' }, h('i', { style: 'background:' + colors[id] })); document.body.append(ghost); placeGhost(ev.clientX, ev.clientY);
+    el.classList.add('dragsrc');
+    const move_ = (e) => { moved = true; placeGhost(e.clientX, e.clientY); tiles.forEach((t) => t.classList.remove('droptgt')); const t2 = dropTileAt(e.clientX, e.clientY); if (t2 != null) tiles[t2].classList.add('droptgt'); };
+    const up = (e) => {
+      el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel);
+      el.classList.remove('dragsrc'); tiles.forEach((t) => t.classList.remove('droptgt')); if (ghost) { ghost.remove(); ghost = null; }
+      if (moved) { const targetId = dropTileAt(e.clientX, e.clientY); if (targetId != null) swapAt(fromPos, arr.indexOf(targetId)); }
+      else tap(fromPos);
+      pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0);
+    };
+    const cancel = () => { el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel); el.classList.remove('dragsrc'); tiles.forEach((t) => t.classList.remove('droptgt')); if (ghost) { ghost.remove(); ghost = null; } };
+    el.addEventListener('pointermove', move_); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', cancel);
+  }
   layout(); stats();
   const solveAll = () => { LD.range(N).forEach((p) => { arr[p] = p; }); sel = -1; layout(); stats(); };
   return { destroy() {}, reveal: solveAll, cheat: solveAll, celebrate: () => { board.classList.add('won'); tiles.forEach((t, id) => t.style.setProperty('--w', ((id % cols) + ((id / cols) | 0)) * 70 + 'ms')); }, puzzle: P,
-    snapshot: () => arr.slice(), applySnapshot: (s) => { if (Array.isArray(s)) { arr = s.slice(); sel = -1; layout(); stats(); } } };
+    snapshot: () => arr.slice(), applySnapshot: (s) => { if (Array.isArray(s)) { for (let i = 0; i < arr.length; i++) arr[i] = s[i] != null ? s[i] : i; sel = -1; layout(); stats(); } } };
 }
 'use strict';
 /* ---------- registry: every puzzle is generated fresh from a seed ---------- */
 const GAMES = {
-  jungle: { name: 'Jungle', em: '\u{1F42F}', tc: '#E39A2D', blurb: 'Place animals by the clues', how: 'Tap an animal, then a tile. White rings show where, a red \u2715 means not. Make every clue true.', mount: mountJungle, levels: [2, 3, 3], gen: (r, l) => LD.genPuzzle(r, l) },
-  alibi: { name: 'Alibi', em: '\u{1F50E}', tc: '#7A4FD0', blurb: 'Who was at the party, and when?', how: 'Tap an hour in a guest\u2019s row to set when they arrived. The bar shows how long they stayed. Make every clue true.', mount: mountAlibi, levels: [3, 4, 4, 5], gen: (r, l) => LD2.genAlibi(r, l) },
+  jungle: { name: 'Jungle', em: '\u{1F42F}', tc: '#E39A2D', blurb: 'Place animals by the clues', how: 'Drag an animal onto a tile, or tap an animal then a tile. White rings show where, a red \u2715 means not. Make every clue true.', mount: mountJungle, levels: [2, 3, 3], gen: (r, l) => LD.genPuzzle(r, l) },
+  alibi: { name: 'Alibi', em: '\u{1F50E}', tc: '#7A4FD0', blurb: 'Who was at the party, and when?', how: 'Drag along a guest\u2019s row to set when they arrived, or tap an hour. The bar shows how long they stayed. Make every clue true.', mount: mountAlibi, levels: [3, 4, 4, 5], gen: (r, l) => LD2.genAlibi(r, l) },
   bridge: { name: 'Bridges', em: '\u{1F309}', tc: '#0E9AA7', blurb: 'Lay one bridge over every tile', how: 'Drag from island 1 to lay a single bridge that covers every tile and visits the islands in number order. Drag backward to undo.', mount: mountBridge, levels: [1, 2, 2, 3], gen: (r, l) => LD3.genZip(r, l) },
   dogs: { name: 'Pup Parade', em: '\u{1F436}', tc: '#E39A2D', blurb: 'Line the dogs up by the rules', how: 'Drag a dog from the kennel into a line-up spot, or tap one then a spot. Rearrange until every rule card is met. Green ticks show the rules you have satisfied.', mount: mountDogs, levels: [1, 2, 2, 3], gen: (r, l) => LD3.genDogs(r, l) },
   lineup: { name: 'Lineup', em: '\u{1F575}\uFE0F', tc: '#3A6FD8', blurb: 'Find the culprit from tricky clues', how: 'Every clue describes the culprit. Rule out any face that breaks one, or switch to Accuse and name your suspect straight away. When only one face is left, accuse them. A wrong accusation costs 8 seconds.', mount: mountLineup, levels: [2, 3, 3], gen: (r, l) => LD3.genLineup(r, l) },
   untangle: { name: 'Untangle', em: '\u{1F578}\uFE0F', tc: '#7A5CF0', blurb: 'Drag nodes until no lines cross', how: 'Drag the glowing nodes around. Red lines are still crossing. Untangle them all.', mount: mountUntangle, levels: [2, 2, 3], gen: (r, l) => LD3.genUntangle(r, l) },
-  paint: { name: 'Layers', em: '\u{1F3A8}', tc: '#FF5A5F', blurb: 'Restack the paper to match', how: 'Tap a shape to bring it to the front, or switch to Send to back. Restack the layers until your picture matches the target.', mount: mountPaint, levels: [1, 2, 2, 3], gen: (r, l) => LD3.paintPrep(LD3.genPaint(r, l)) },
-  hues: { name: 'Hues', em: '\u{1F308}', tc: '#C646E8', blurb: 'Swap tiles to rebuild the gradient', how: 'The colours form a smooth gradient between the four corners. Tap two tiles to swap them. Tiles with a dot are fixed.', mount: mountHues, levels: [1, 2, 3], gen: (r, l) => LD3.genHues(r, l) },
+  paint: { name: 'Layers', em: '\u{1F3A8}', tc: '#FF5A5F', blurb: 'Restack the paper to match', how: 'Drag a layer chip to reorder the stack, or tap a shape to bring it to the front (or switch to Send to back). Restack until your picture matches the target.', mount: mountPaint, levels: [1, 2, 2, 3], gen: (r, l) => LD3.paintPrep(LD3.genPaint(r, l)) },
+  hues: { name: 'Hues', em: '\u{1F308}', tc: '#C646E8', blurb: 'Swap tiles to rebuild the gradient', how: 'The colours form a smooth gradient between the four corners. Drag a tile onto another to swap them, or tap two tiles. Tiles with a dot are fixed.', mount: mountHues, levels: [1, 2, 3], gen: (r, l) => LD3.genHues(r, l) },
 };
 const GAME_IDS = Object.keys(GAMES);
 
@@ -1997,16 +2088,18 @@ function webDb() {
     connectP = (window.mqtt ? Promise.resolve() : loadScript(MQTT_SRC)).then(() => new Promise((resolve) => {
       let relay = 0;
       const tryConnect = () => {
-        const c = window.mqtt.connect(WEB_RELAYS[relay % WEB_RELAYS.length], { clientId: 'wd' + Math.random().toString(36).slice(2, 10), clean: true, keepalive: 30, reconnectPeriod: 4000, connectTimeout: 8000 });
-        let done = false;
-        c.on('connect', () => { if (done) return; done = true; client = c; c.subscribe(WEB_NS + 'lb/+', { qos: 0 }); resolve(c); });
+        const c = window.mqtt.connect(WEB_RELAYS[relay % WEB_RELAYS.length], { clientId: 'wd' + Math.random().toString(36).slice(2, 10), clean: true, keepalive: 30, reconnectPeriod: 4000, connectTimeout: 10000 });
+        let done = false; let watchdog = null;
+        const rotate = () => { if (client !== c) return; try { c.end(true); } catch (e) { /* ignore */ } client = null; relay++; tryConnect(); };
+        c.on('connect', () => { if (!done) { done = true; client = c; c.subscribe(WEB_NS + 'lb/+', { qos: 0 }); resolve(c); } clearTimeout(watchdog); });
+        c.on('close', () => { if (done && client === c) { clearTimeout(watchdog); watchdog = setTimeout(rotate, 10000); } });
         c.on('message', (t, buf) => {
           let d; try { d = JSON.parse(new TextDecoder().decode(buf)); } catch (e) { return; }
           if (!d || typeof d !== 'object') return;
           const id = t.slice((WEB_NS + 'lb/').length); if (!id) return;
           rows.set(id, d); listeners.forEach((cb) => { try { cb(); } catch (e) { /* ignore */ } });
         });
-        setTimeout(() => { if (!done) { done = true; try { c.end(true); } catch (e) { /* ignore */ } if (relay < WEB_RELAYS.length - 1) { relay++; tryConnect(); } else resolve(null); } }, 8000);
+        setTimeout(() => { if (!done) { try { c.end(true); } catch (e) { /* ignore */ } if (relay < WEB_RELAYS.length - 1) { relay++; tryConnect(); } else resolve(null); } }, 8000);
       };
       tryConnect();
     })).catch(() => null);
@@ -2034,7 +2127,7 @@ function webDb() {
    the artifact's live room, scoped to one room id over the relay ---------- */
 function webRoom(id) {
   const ME = 'w' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
-  const HEARTBEAT = 2000, TIMEOUT = 7000;
+  const HEARTBEAT = 2000, TIMEOUT = 14000;
   const known = new Map([[ME, { presence: Object.freeze({}), updatedAt: Date.now(), seen: Infinity }]]);
   const frozen = new Map(), topics = new Map(), peerHandlers = new Set();
   const pending = { joined: new Set([ME]), left: new Map(), updated: new Set() };
@@ -2078,11 +2171,14 @@ function webRoom(id) {
   function connect() {
     const tryConnect = () => {
       const url = WEB_RELAYS[relay % WEB_RELAYS.length];
-      const c = window.mqtt.connect(url, { clientId: ME, clean: true, keepalive: 20, reconnectPeriod: 3000, connectTimeout: 8000, will: { topic: base + 'p/' + ME, payload: JSON.stringify({ bye: 1 }), qos: 0, retain: false } });
-      client = c; let ever = false;
-      c.on('connect', () => { ever = true; c.subscribe(base + '#', { qos: 0 }, () => { pub('hello', { from: ME }); announce(); }); });
+      const c = window.mqtt.connect(url, { clientId: ME, clean: true, keepalive: 20, reconnectPeriod: 4000, connectTimeout: 10000, will: { topic: base + 'p/' + ME, payload: JSON.stringify({ bye: 1 }), qos: 0, retain: false } });
+      client = c; let ever = false; let watchdog = null;
+      const rotate = () => { if (client !== c) return; try { c.end(true); } catch (e) { /* ignore */ } relay++; tryConnect(); };
+      const armWatchdog = () => { clearTimeout(watchdog); watchdog = setTimeout(rotate, 10000); };
+      c.on('connect', () => { ever = true; clearTimeout(watchdog); c.subscribe(base + '#', { qos: 0 }, () => { pub('hello', { from: ME }); announce(); }); });
       c.on('message', onMessage);
-      setTimeout(() => { if (client === c && !ever) { relay++; if (relay < WEB_RELAYS.length) tryConnect(); } }, 9000);
+      c.on('close', () => { if (client === c && ever) armWatchdog(); });
+      setTimeout(() => { if (client === c && !ever) rotate(); }, 9000);
     };
     (window.mqtt ? Promise.resolve() : loadScript(MQTT_SRC)).then(tryConnect).catch(() => {});
   }
@@ -2222,17 +2318,19 @@ const reduceMotion = () => { try { return window.matchMedia('(prefers-reduced-mo
 
 /* ---------- completion celebration ---------- */
 const CONF = ['#FF5A5F', '#FF9F1C', '#FFD23F', '#2EC4B6', '#3A86FF', '#8338EC', '#FF4D9D'];
-function celebrate(sw, timeTxt) {
-  const box = h('div', { class: 'cele', 'aria-hidden': 'true' });
+function celebrate(sw, timeTxt, onNext) {
+  const box = h('div', { class: 'cele' });
   if (!reduceMotion()) {
     for (let k = 0; k < 54; k++) {
-      const ang = Math.random() * Math.PI * 2; const sp = 80 + Math.random() * 190; const p = h('i', { class: 'cf' });
+      const ang = Math.random() * Math.PI * 2; const sp = 80 + Math.random() * 190; const p = h('i', { class: 'cf', 'aria-hidden': 'true' });
       p.style.cssText = `--c:${CONF[k % CONF.length]};--dx:${(Math.cos(ang) * sp).toFixed(0)}px;--dy:${(Math.sin(ang) * sp + 130).toFixed(0)}px;--r:${(Math.random() * 760 - 380).toFixed(0)}deg;--s:${(0.65 + Math.random() * 0.9).toFixed(2)};--t:${(0.95 + Math.random() * 0.7).toFixed(2)}s;--sh:${Math.random() < 0.5 ? '50%' : '2px'}`;
       box.append(p);
     }
-    box.append(h('i', { class: 'ring' }), h('i', { class: 'ring r2' }));
+    box.append(h('i', { class: 'ring', 'aria-hidden': 'true' }), h('i', { class: 'ring r2', 'aria-hidden': 'true' }));
   }
-  box.append(h('div', { class: 'badge', html: '<svg viewBox="0 0 52 52" aria-hidden="true"><circle class="cc" cx="26" cy="26" r="23"/><path class="ck" d="M15 27l8 8 15-17"/></svg>' }, h('b', null, 'Solved'), h('span', null, timeTxt)));
+  const badgeKids = [h('b', null, 'Solved'), h('span', null, timeTxt)];
+  if (onNext) badgeKids.push(h('button', { class: 'btn you sm', style: 'margin-top:10px', onclick: onNext }, 'Continue →'));
+  box.append(h('div', { class: 'badge', html: '<svg viewBox="0 0 52 52" aria-hidden="true"><circle class="cc" cx="26" cy="26" r="23"/><path class="ck" d="M15 27l8 8 15-17"/></svg>' }, ...badgeKids));
   sw.append(box); return box;
 }
 
@@ -2259,9 +2357,12 @@ function playScreen(o) {
       const res = { time: Math.round(t * 10) / 10, gameId: o.gameId, at: performance.now() };
       if (o.onSolveNow) o.onSolveNow(res);
       try { game && game.celebrate && game.celebrate(); } catch (e) { /* ignore */ }
-      stage.classList.add('pulse'); celebrate(sw, fmt(t));
+      stage.classList.add('pulse');
+      let advanced = false; let nextT = null;
+      const advance = () => { if (advanced) return; advanced = true; clearTimeout(nextT); if (o.onSolved) o.onSolved(res); };
+      celebrate(sw, fmt(t), o.onSolved ? advance : null);
       const delay = reduceMotion() ? 500 : o.fast ? 1000 : 1600;
-      timers.push(setTimeout(() => { if (o.onSolved) o.onSolved(res); }, delay));
+      nextT = setTimeout(advance, delay); timers.push(nextT);
     },
   };
   function giveUp() {
@@ -2336,8 +2437,7 @@ function startSurprise() { startRandom(LD.pick(Math.random, GAME_IDS)); }
 /* ---------- Friend race: five puzzles, fastest total time wins; rated with Elo.
    If you finish first, you watch a live read-only mirror of your friend's
    board until they finish too (or quit). ---------- */
-const PICKS = 5;
-const validPicks = (a) => Array.isArray(a) && a.length === PICKS && a.every((g) => typeof g === 'string' && GAMES[g]);
+const validPicks = (a, n) => Array.isArray(a) && a.length === n && n >= 1 && n <= 5 && a.every((g) => typeof g === 'string' && GAMES[g]);
 const GIVEUP_PENALTY = 60;
 function raceHud(games, oppName) {
   const nP = games.length;
@@ -2376,7 +2476,13 @@ function runRace(cfg) {
   }));
   unsubs.push(room.onPeers(() => {
     if (room.peers().some((p) => !p.sameTab)) { clearTimeout(leftTimer); leftTimer = null; }
-    else if (!leftTimer && !S.over) leftTimer = setTimeout(() => { if (!room.peers().some((p) => !p.sameTab)) end(true, 'Your friend disconnected.'); }, 6000);
+    else if (!leftTimer && !S.over) leftTimer = setTimeout(() => {
+      if (S.over || room.peers().some((p) => !p.sameTab)) return;
+      // only the side that actually finished can claim a win on disconnect; otherwise
+      // it's a void race, so the two sides can never both end up declared the winner
+      if (S.myDone) end(true, 'Your friend disconnected.');
+      else end(null, 'Connection to your friend was lost before the race finished.', true);
+    }, 8000);
   }));
   function startPuzzle(i) {
     const gid = games[i];
@@ -2425,6 +2531,12 @@ function runRace(cfg) {
     if (S.over) return; const wait = left ? 0 : S.celebUntil - performance.now(); if (wait > 50) { if (!S.pending) { S.pending = true; setTimeout(() => { S.pending = false; end(won, why, left); }, wait); } return; }
     S.over = true; clearTimeout(leftTimer); clearTimeout(graceT); unsubs.forEach((u) => { try { u(); } catch (e) { /* noop */ } }); teardownSpectate();
     try { room.leave(); } catch (e) { /* noop */ }
+    if (won == null) {
+      view(h('div', { class: 'wrap' }, h('div', { class: 'card result' },
+        h('h1', null, 'No result'), why ? h('p', { class: 'muted' }, why) : null,
+        h('div', { class: 'stack' }, h('button', { class: 'btn rival block', onclick: () => lobby() }, 'New room'), homeBtn()))));
+      return;
+    }
     const rating = eloApply(S.oppE == null ? 1200 : S.oppE, won ? 1 : 0); const delta = rating.now - rating.old;
     const t = (v, g) => (v != null ? (g ? 'gave up' : fmt(v)) : '\u2014');
     const rows = games.map((g, k) => h('tr', null, h('td', null, GAMES[g].em + ' ' + GAMES[g].name), h('td', { class: !S.gave[k] && S.times[k] != null && S.oppTimes[k] != null && S.times[k] < S.oppTimes[k] ? 'best' : '' }, t(S.times[k], S.gave[k])), h('td', { class: !S.oppGave[k] && S.times[k] != null && S.oppTimes[k] != null && S.oppTimes[k] < S.times[k] ? 'best' : '' }, t(S.oppTimes[k], S.oppGave[k]))));
@@ -2443,33 +2555,39 @@ function runRace(cfg) {
 const CODE_CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const makeCode = () => Array.from({ length: 4 }, () => CODE_CH[Math.floor(Math.random() * CODE_CH.length)]).join('');
 function lobby() {
-  App.screen = 'lobby'; const ok = !!App.room;
+  App.screen = 'lobby'; const ok = !!App.room; let n = 5;
   const input = h('input', { class: 'field', maxlength: 4, placeholder: 'Enter code', 'aria-label': 'Room code', autocomplete: 'off', autocapitalize: 'characters' });
+  const nBtns = LD.range(5).map((i) => h('button', { class: 'btn sm ' + (i === 4 ? 'you' : 'ghost'), 'aria-label': (i + 1) + ' puzzle' + (i ? 's' : ''), onclick: () => { n = i + 1; nBtns.forEach((b, k) => { b.className = 'btn sm ' + (k === i ? 'you' : 'ghost'); }); } }, String(i + 1)));
   view(h('div', { class: 'wrap' },
     h('div', { class: 'topbar' }, h('button', { class: 'icon-btn', 'aria-label': 'Back', onclick: () => home() }, '\u2190'), h('div', { class: 'ttl' }, 'Race a friend')),
-    h('p', { class: 'how' }, ok ? 'You each pick five puzzles in order. Then a quick draw goes down the list and flips a coin for every row to decide whose pick you both play. You race through them at your own pace, you can see which puzzle your friend is on and how fast they solved each, and the first to finish wins and moves Elo.' : 'Live rooms need this page opened signed in on claude.ai. You can still play the daily puzzle and practice.'),
-    h('div', { class: 'card' }, h('h2', null, 'Host'), h('p', { class: 'muted small' }, 'Get a code to share.'), h('button', { class: 'btn rival block', disabled: !ok, onclick: () => hostRoom() }, 'Create room')),
+    h('p', { class: 'how' }, ok ? 'You each pick puzzles in order. Then a quick draw goes down the list and flips a coin for every row to decide whose pick you both play. You race through them at your own pace, you can see which puzzle your friend is on and how fast they solved each, and the fastest total time wins and moves Elo.' : 'Live rooms need this page opened signed in on claude.ai. You can still play the daily puzzle and practice.'),
+    h('div', { class: 'card' }, h('h2', null, 'Host'), h('p', { class: 'muted small' }, 'Get a code to share.'),
+      h('div', { class: 'muted small', style: 'margin:10px 0 6px' }, 'Number of puzzles'), h('div', { class: 'stack', style: 'display:flex;gap:6px;margin-bottom:12px' }, nBtns),
+      h('button', { class: 'btn rival block', disabled: !ok, onclick: () => hostRoom(n) }, 'Create room')),
     h('div', { class: 'card', style: 'margin-top:12px' }, h('h2', null, 'Join'), h('p', { class: 'muted small' }, 'Got a code from a friend?'), input,
       h('button', { class: 'btn you block', style: 'margin-top:10px', disabled: !ok, onclick: () => { const c = input.value.trim().toUpperCase(); if (c.length !== 4) { toast('Codes have 4 letters.'); return; } joinRoom(c); } }, 'Join room'))));
 }
 async function enter(code) { try { return await App.room.join('h2h-' + code.toLowerCase()); } catch (e) { toast(e && e.code === 'not_permitted' ? 'Your account cannot use live rooms.' : 'Could not open the room. Try again.'); return null; } }
 async function oppLabel(room) { const o = room.peers().find((p) => !p.sameTab); if (!o || !o.by) return 'Friend'; const n = await names([o.by]); return n[o.by] || 'Friend'; }
-/* ---------- pick five each, then the draw ---------- */
-async function hostRoom() { const code = makeCode(); const room = await enter(code); if (room) pickLobby(room, true, code); }
-async function joinRoom(code) { const room = await enter(code); if (room) pickLobby(room, false, code); }
-function pickLobby(room, host, code) {
+/* ---------- pick N each, then the draw ---------- */
+async function hostRoom(n) { const code = makeCode(); const room = await enter(code); if (room) pickLobby(room, true, code, n); }
+async function joinRoom(code) { const room = await enter(code); if (room) pickLobby(room, false, code, null); }
+function pickLobby(room, host, code, n) {
   App.screen = 'lobby';
-  let mine = LD.shuffle(Math.random, GAME_IDS).slice(0, PICKS); let ready = false, theirs = null, theirReady = false, started = false, present = false; const offs = [];
+  let mine = n ? LD.shuffle(Math.random, GAME_IDS).slice(0, n) : null; let ready = false, theirs = null, theirReady = false, started = false, present = false; const offs = [];
   const clear = () => offs.forEach((f) => { try { f(); } catch (e) { /* noop */ } });
-  const emitPicks = () => room.emit('h2h', { t: 'picks', set: mine.slice(), ready }).catch(() => {});
+  const emitPicks = () => { if (mine) room.emit('h2h', { t: 'picks', set: mine.slice(), ready }).catch(() => {}); };
   const status = h('div', { class: 'who' }, h('i', { class: 'dot' }), h('span', null, host ? 'Waiting for a friend\u2026' : 'Looking for the host\u2026'));
   const list = h('div', { class: 'slots' }); const friendLine = h('div', { class: 'muted small', style: 'text-align:center;margin-top:10px;min-height:20px' }, '');
   const readyBtn = h('button', { class: 'btn you block', style: 'margin-top:12px', onclick: () => { ready = !ready; draw(); emitPicks(); maybeStart(); } }, 'Lock in my list');
-  const shuf = h('button', { class: 'btn ghost sm', onclick: () => { mine = LD.shuffle(Math.random, GAME_IDS).slice(0, PICKS); draw(); emitPicks(); } }, 'Shuffle my list');
+  const shuf = h('button', { class: 'btn ghost sm', onclick: () => { mine = LD.shuffle(Math.random, GAME_IDS).slice(0, n); draw(); emitPicks(); } }, 'Shuffle my list');
   function draw() {
-    list.replaceChildren(...mine.map((g, i) => h('div', { class: 'slot-row' }, h('span', { class: 'sl-n' }, i + 1),
-      h('select', { disabled: ready, 'aria-label': 'Puzzle ' + (i + 1), onchange: (e) => { mine[i] = e.target.value; emitPicks(); } }, GAME_IDS.map((id) => h('option', { value: id, selected: id === g }, GAMES[id].em + '  ' + GAMES[id].name))), h('span', { class: 'icon-btn sm ph' }))));
-    readyBtn.textContent = ready ? 'Locked in \u2713 (tap to edit)' : 'Lock in my list'; readyBtn.className = 'btn block ' + (ready ? 'ghost' : 'you'); readyBtn.disabled = !present; shuf.disabled = ready;
+    if (!mine) { list.replaceChildren(h('p', { class: 'muted small' }, 'Waiting for the host to set the number of puzzles\u2026')); readyBtn.disabled = true; shuf.disabled = true; }
+    else {
+      list.replaceChildren(...mine.map((g, i) => h('div', { class: 'slot-row' }, h('span', { class: 'sl-n' }, i + 1),
+        h('select', { disabled: ready, 'aria-label': 'Puzzle ' + (i + 1), onchange: (e) => { mine[i] = e.target.value; emitPicks(); } }, GAME_IDS.map((id) => h('option', { value: id, selected: id === g }, GAMES[id].em + '  ' + GAMES[id].name))), h('span', { class: 'icon-btn sm ph' }))));
+      readyBtn.textContent = ready ? 'Locked in \u2713 (tap to edit)' : 'Lock in my list'; readyBtn.className = 'btn block ' + (ready ? 'ghost' : 'you'); readyBtn.disabled = !present; shuf.disabled = ready;
+    }
     friendLine.textContent = !present ? '' : theirReady ? 'Your friend locked in their list \u2713' : 'Your friend is still choosing\u2026';
     status.firstChild.className = 'dot' + (present ? ' on' : ''); status.lastChild.textContent = present ? (host ? 'Friend joined.' : 'Connected to the host.') : (host ? 'Waiting for a friend\u2026' : 'Looking for the host\u2026');
   }
@@ -2478,33 +2596,37 @@ function pickLobby(room, host, code) {
     const seed = String(Date.now()) + Math.random().toString(36).slice(2, 6); room.emit('h2h', { t: 'start', m: seed, hs: mine.slice(), gs: theirs.slice() }).catch(() => {}); begin(seed, mine.slice(), theirs.slice());
   }
   async function begin(seed, hs, gs) { if (started) return; started = true; clear(); const name = await oppLabel(room); runReveal({ room, host, seed, hs, gs, oppName: name }); }
-  offs.push(room.onPeers(() => { present = room.peers().some((p) => !p.sameTab); draw(); if (present) emitPicks(); }));
+  offs.push(room.onPeers(() => {
+    present = room.peers().some((p) => !p.sameTab);
+    if (!host && present && !mine) { const h2 = room.peers().find((p) => !p.sameTab); const theirN = h2 && h2.presence && h2.presence.n; if (theirN >= 1 && theirN <= 5) { n = theirN; mine = LD.shuffle(Math.random, GAME_IDS).slice(0, n); } }
+    draw(); if (present) emitPicks();
+  }));
   offs.push(room.on('h2h', (msg) => {
     if (msg.sameTab || started) return; const d = msg.data || {};
-    if (d.t === 'picks' && validPicks(d.set)) { theirs = d.set.slice(); theirReady = !!d.ready; draw(); maybeStart(); }
-    else if (d.t === 'start' && !host && d.m && validPicks(d.hs) && validPicks(d.gs)) begin(d.m, d.hs.slice(), d.gs.slice());
+    if (d.t === 'picks' && n && validPicks(d.set, n)) { theirs = d.set.slice(); theirReady = !!d.ready; draw(); maybeStart(); }
+    else if (d.t === 'start' && !host && d.m && Array.isArray(d.hs) && validPicks(d.hs, d.hs.length) && validPicks(d.gs, d.hs.length)) begin(d.m, d.hs.slice(), d.gs.slice());
   }));
-  room.presence({ host }).catch(() => {}); draw();
+  room.presence(host ? { host, n } : { host }).catch(() => {}); draw();
   view(h('div', { class: 'wrap' }, h('div', { class: 'topbar' }, h('button', { class: 'icon-btn', 'aria-label': 'Leave room', onclick: () => { clear(); try { room.leave(); } catch (e) { /* noop */ } lobby(); } }, '\u2190'), h('div', { class: 'ttl' }, host ? 'Your room' : 'Room ' + code)),
     host ? h('div', { class: 'card', style: 'text-align:center' }, h('div', { class: 'muted' }, 'Tell your friend this code'), h('div', { class: 'code', 'aria-label': 'Room code ' + code.split('').join(' ') }, code), status) : h('div', { class: 'card', style: 'text-align:center' }, status),
-    h('div', { class: 'card', style: 'margin-top:12px' }, h('h2', null, 'Pick your five'), h('p', { class: 'muted small', style: 'margin:2px 0 10px' }, 'In the order you want them. Repeats are fine. Your friend picks five too, then a draw decides each row.'), list, h('div', { class: 'slot-ctl' }, shuf), readyBtn, friendLine)));
+    h('div', { class: 'card', style: 'margin-top:12px' }, h('h2', null, 'Pick your puzzles'), h('p', { class: 'muted small', style: 'margin:2px 0 10px' }, 'In the order you want them. Repeats are fine. Your friend picks the same number, then a draw decides each row.'), list, h('div', { class: 'slot-ctl' }, shuf), readyBtn, friendLine)));
 }
 /* both lists side by side, then a coin flip down each row decides what we play */
 function runReveal(cfg) {
-  const { room, host, seed, hs, gs, oppName } = cfg; const mine = host ? hs : gs, theirs = host ? gs : hs; const rr = LD.makeRng('rv|' + seed); const timers = []; let gone = false;
+  const { room, host, seed, hs, gs, oppName } = cfg; const mine = host ? hs : gs, theirs = host ? gs : hs; const rr = LD.makeRng('rv|' + seed); const timers = []; let gone = false; const n = hs.length;
   const T = (fn, ms) => { timers.push(setTimeout(() => { if (!gone) fn(); }, ms)); };
-  const outcome = LD.range(PICKS).map((i) => (LD.makeRng('flip|' + seed + '|' + i)() < 0.5 ? 'host' : 'guest'));
+  const outcome = LD.range(n).map((i) => (LD.makeRng('flip|' + seed + '|' + i)() < 0.5 ? 'host' : 'guest'));
   const final = outcome.map((o, i) => (o === 'host' ? hs[i] : gs[i])); const mineWins = outcome.map((o) => (o === 'host') === host);
   const card = (g, side) => h('div', { class: 'rv-card ' + side }, h('span', { class: 'em' }, GAMES[g].em), GAMES[g].name);
-  const rows = LD.range(PICKS).map((i) => h('div', { class: 'rv-row pre' }, card(mine[i], 'L'), h('span', { class: 'rv-n' }, i + 1), card(theirs[i], 'R')));
-  const chips = LD.range(PICKS).map((i) => h('div', { class: 'rv-chip' }, i + 1)); const go = h('div', { class: 'rv-go' }, '');
+  const rows = LD.range(n).map((i) => h('div', { class: 'rv-row pre' }, card(mine[i], 'L'), h('span', { class: 'rv-n' }, i + 1), card(theirs[i], 'R')));
+  const chips = LD.range(n).map((i) => h('div', { class: 'rv-chip' }, i + 1)); const go = h('div', { class: 'rv-go' }, '');
   const reduce = reduceMotion();
   view(h('div', { class: 'wrap' }, h('div', { class: 'topbar' }, h('div', { class: 'ttl' }, 'The draw', h('span', { class: 'sub' }, 'A coin flip on every row picks whose puzzle we both play'))),
     h('div', { class: 'rv-cols' }, h('b', null, 'You'), h('span'), h('b', null, oppName)), ...rows, h('div', { class: 'rv-final' }, h('small', null, 'Your race lineup'), h('div', { class: 'rv-chips' }, chips)), go));
   current = { destroy() { gone = true; timers.forEach(clearTimeout); } };
   const spark = (el) => { for (let k = 0; k < 12; k++) { const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 60; const p = h('i', { class: 'rv-spark' }); p.style.cssText = `--c:${CONF[k % CONF.length]};--dx:${(Math.cos(a) * sp).toFixed(0)}px;--dy:${(Math.sin(a) * sp).toFixed(0)}px;--r:0deg;--t:.8s`; el.append(p); setTimeout(() => p.remove(), 900); } };
   rows.forEach((r, i) => T(() => r.classList.remove('pre'), 150 + i * 170));
-  const start0 = 150 + PICKS * 170 + 650;
+  const start0 = 150 + n * 170 + 650;
   function resolveRow(i, at) {
     const row = rows[i]; const L = row.querySelector('.L'), R = row.querySelector('.R'); const win = mineWins[i] ? L : R, lose = mineWins[i] ? R : L;
     T(() => row.classList.add('act'), at);
@@ -2515,7 +2637,7 @@ function runReveal(cfg) {
     T(() => { L.classList.remove('hot'); R.classList.remove('hot'); win.classList.add('win'); lose.classList.add('lose'); spark(win); chips[i].textContent = GAMES[final[i]].em; chips[i].classList.add('on'); go.textContent = GAMES[final[i]].name + ' it is'; }, t);
     T(() => row.classList.remove('act'), t + 650); return t + 700;
   }
-  let at = start0; for (let i = 0; i < PICKS; i++) at = resolveRow(i, at);
+  let at = start0; for (let i = 0; i < n; i++) at = resolveRow(i, at);
   T(() => { go.textContent = 'Race starts now!'; }, at + 200);
   T(() => { gone = true; runRace({ host, seed, room, oppName, set: final }); }, at + 1300);
 }

@@ -65,11 +65,11 @@ function mountLineup(root, ctx) {
   const P = ctx.puzzle(); const N = P.faces.length; const out = new Set(); let won = false; let mode = 'rule';
   const clues = h('div', { class: 'clues lnclues' }, P.clues.map(lnClueCard));
   const grid = h('div', { class: 'lng' });
-  const tiles = P.faces.map((f, i) => { const b = h('button', { class: 'lnf', 'aria-label': 'Suspect ' + (i + 1), html: faceSVG(f, 64), onclick: () => tap(i) }); grid.append(b); return b; });
+  const tiles = P.faces.map((f, i) => { const b = h('button', { class: 'lnf', 'aria-label': 'Suspect ' + (i + 1), html: faceSVG(f, 64), onclick: () => { if (pointerHandled) return; tap(i); } }); b.addEventListener('pointerdown', (ev) => startDrag(ev, i)); grid.append(b); return b; });
   const rule = h('button', { 'aria-pressed': 'true', onclick: () => setMode('rule') }, 'Rule out \u2715'); const acc = h('button', { 'aria-pressed': 'false', onclick: () => setMode('accuse') }, 'Accuse \u261D');
   const note = h('div', { class: 'ln-note' }, '');
   const cta = h('button', { class: 'btn you block accuse-cta hide', onclick: () => { const q = LD.range(N).find((z) => !out.has(z)); if (q != null) accuse(q); } }, '\u261D  Only one left: accuse them!');
-  const hint = () => (mode === 'rule' ? 'Tap faces that break a clue to mark them with a red \u2715. They stay in full colour so you can still count them. Or switch to Accuse.' : 'Tap the culprit. A wrong accusation costs 8 seconds.');
+  const hint = () => (mode === 'rule' ? 'Tap faces that break a clue to mark them with a red \u2715, or drag one onto Accuse to name them straight away. They stay in full colour so you can still count them.' : 'Tap the culprit, or drag their face onto Accuse. A wrong accusation costs 8 seconds.');
   note.textContent = hint();
   function setMode(m) { mode = m; rule.setAttribute('aria-pressed', String(m === 'rule')); acc.setAttribute('aria-pressed', String(m === 'accuse')); grid.classList.toggle('accusing', m === 'accuse'); note.textContent = hint(); }
   root.append(clues, h('div', { class: 'seg ln-seg' }, rule, acc), grid, cta, note);
@@ -89,6 +89,25 @@ function mountLineup(root, ctx) {
     if (mode === 'rule') { if (out.has(i)) out.delete(i); else out.add(i); draw(); return; }
     if (out.has(i)) { out.delete(i); draw(); return; }
     accuse(i);
+  }
+  let pointerHandled = false;
+  function isOverAccuse(x, y) { const el = document.elementFromPoint(x, y); return !!el && (el === acc || acc.contains(el)); }
+  function startDrag(ev, i) {
+    if (!ctx.active() || won || out.has(i)) return; const el = ev.currentTarget; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    const sx = ev.clientX, sy = ev.clientY; let moved = false;
+    const move_ = (e) => {
+      if (!moved && Math.hypot(e.clientX - sx, e.clientY - sy) < 6) return; moved = true;
+      el.classList.add('dragging'); acc.classList.toggle('droptgt', isOverAccuse(e.clientX, e.clientY));
+    };
+    const up = (e) => {
+      el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel);
+      el.classList.remove('dragging'); acc.classList.remove('droptgt');
+      if (!moved) tap(i);
+      else if (isOverAccuse(e.clientX, e.clientY)) accuse(i);
+      pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0);
+    };
+    const cancel = () => { el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel); el.classList.remove('dragging'); acc.classList.remove('droptgt'); };
+    el.addEventListener('pointermove', move_); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', cancel);
   }
   draw();
   const reveal = () => { LD.range(N).forEach((q) => { if (q !== P.culprit) out.add(q); }); draw(); grid.classList.add('won'); tiles[P.culprit].classList.add('caught'); };

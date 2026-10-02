@@ -144,18 +144,23 @@ h2{font-size:21px;font-weight:700}
 .stage{padding:10px}
 .jgrid{display:grid;grid-template-columns:minmax(0,1fr) clamp(38px,11vw,50px) minmax(0,var(--bf,1.1fr));gap:8px;align-items:start}
 .tray{display:flex;flex-direction:column;gap:6px}
-.slot{width:100%;aspect-ratio:1;border:0;border-radius:50%;background:var(--surface2);display:grid;place-items:center;cursor:pointer;padding:0}
+.slot{width:100%;aspect-ratio:1;border:0;border-radius:50%;background:var(--surface2);display:grid;place-items:center;cursor:grab;padding:0;touch-action:none}
+.slot:active{cursor:grabbing}
 .slot.used{opacity:.28}
 .slot.sel{box-shadow:0 0 0 3px var(--ink)}
+.slot.dragsrc{opacity:.35}
 .tok{--c:#888;display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 3px var(--c);font-size:clamp(18px,5.4vw,26px);line-height:1}
 .tok.sel{box-shadow:inset 0 0 0 3px var(--c),0 0 0 3px var(--ink)}
 .jb{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:4px}
-.cell{position:relative;aspect-ratio:1;border:0;border-radius:12px;padding:0;cursor:pointer;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.cell{position:relative;aspect-ratio:1;border:0;border-radius:12px;padding:0;cursor:pointer;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35);touch-action:none}
 .cell .tok{width:68%;height:68%;font-size:clamp(18px,6vw,32px);box-shadow:inset 0 0 0 3px var(--c),0 2px 6px rgba(0,0,0,.28)}
 .cell .tl{position:absolute;left:6px;bottom:3px;font:700 9px var(--font-b);color:rgba(0,0,0,.55)}
 .cell.jungle .tl,.cell.rock .tl,.cell.mud .tl{color:rgba(255,255,255,.9)}
 .cell .palm{position:absolute;right:4px;top:2px;font-size:clamp(11px,3.4vw,18px)}
 .cell.tgt{outline:2.5px dashed var(--ink);outline-offset:-5px}
+.cell.dragsrc{opacity:.35}
+.cell.droptgt{outline:2.5px solid var(--rival);outline-offset:-3px}
+.jg-ghost{position:fixed;left:0;top:0;width:44px;height:44px;pointer-events:none;transform:translate(-50%,-50%) scale(1.2);z-index:999;display:grid;place-items:center;font-size:28px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
 .cell.grass,.sw-t.grass{background:repeating-linear-gradient(115deg,#D7EE78 0 7px,#C4E05A 7px 13px)}
 .cell.jungle,.sw-t.jungle{background:radial-gradient(circle at 25% 30%,#58B04C 0 18%,transparent 19%),radial-gradient(circle at 72% 70%,#2F8A3D 0 22%,transparent 23%),#3F9A40}
 .cell.rock,.sw-t.rock{background:radial-gradient(circle at 30% 35%,#B9B9C2 0 22%,transparent 23%),radial-gradient(circle at 70% 70%,#85858F 0 26%,transparent 27%),#9C9CA6}
@@ -224,7 +229,8 @@ h2{font-size:21px;font-weight:700}
 .al-who{display:flex;flex-direction:column;align-items:center;gap:1px}
 .al-who .tok{width:42px;height:42px;font-size:24px;flex:none}
 .al-who small{font:700 11px var(--font-b);color:var(--muted)}
-.al-track{position:relative;display:grid;grid-template-columns:repeat(var(--T),1fr);height:38px;border-radius:10px;background:var(--surface2);overflow:hidden}
+.al-track{position:relative;display:grid;grid-template-columns:repeat(var(--T),1fr);height:38px;border-radius:10px;background:var(--surface2);overflow:hidden;touch-action:none;cursor:grab}
+.al-track:active{cursor:grabbing}
 .al-cell{border:0;background:transparent;box-shadow:inset -1px 0 0 var(--line);cursor:pointer;padding:0}
 .al-cell:last-of-type{box-shadow:none}
 .al-bar{position:absolute;top:4px;bottom:4px;left:calc(var(--s,0)/var(--T)*100% + 2px);width:calc(var(--d)/var(--T)*100% - 4px);border-radius:8px;background:var(--c);display:none;align-items:center;justify-content:center;color:#fff;font:800 12px var(--font-d);pointer-events:none;box-shadow:0 2px 5px rgba(0,0,0,.2)}
@@ -332,7 +338,7 @@ body{overflow-x:hidden}
 .ring{position:absolute;left:50%;top:44%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:4px solid #FFD23F;opacity:0;animation:ringb .9s ease-out .05s both}
 .ring.r2{border-color:#fff;animation-delay:.2s}
 @keyframes ringb{0%{opacity:.9;transform:scale(.3)}100%{opacity:0;transform:scale(11)}}
-.badge{position:relative;z-index:2;text-align:center;color:#fff;background:rgba(18,14,38,.92);border-radius:24px;padding:14px 28px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35),0 0 0 2px rgba(255,210,63,.6);animation:badge .6s cubic-bezier(.2,1.5,.4,1) .12s both}
+.badge{position:relative;z-index:2;text-align:center;color:#fff;background:rgba(18,14,38,.92);border-radius:24px;padding:14px 28px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35),0 0 0 2px rgba(255,210,63,.6);animation:badge .6s cubic-bezier(.2,1.5,.4,1) .12s both;pointer-events:auto}
 .badge svg{width:54px;height:54px;display:block;margin:0 auto 4px}
 .badge .cc{fill:none;stroke:#FFD23F;stroke-width:3;stroke-dasharray:145;stroke-dashoffset:145;animation:draw .6s ease .3s forwards}
 .badge .ck{fill:none;stroke:#fff;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:40;stroke-dashoffset:40;animation:draw .35s ease .7s forwards}
@@ -380,7 +386,8 @@ body{overflow-x:hidden}
 .neg.two{display:inline-flex;gap:2px;padding:2px 3px}
 .lnmini svg{width:48px;height:38px;display:block}
 .lng{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;max-width:420px;margin:0 auto}
-.lnf{position:relative;border:0;padding:0;background:none;border-radius:14px;cursor:pointer;line-height:0;transition:transform .2s,filter .3s,opacity .3s;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.lnf{position:relative;border:0;padding:0;background:none;border-radius:14px;cursor:grab;line-height:0;transition:transform .2s,filter .3s,opacity .3s;box-shadow:0 3px 8px rgba(0,0,0,.3);touch-action:none}
+.lnf.dragging{z-index:4;transform:scale(1.14);box-shadow:0 10px 20px rgba(0,0,0,.4)}
 .lnf svg{width:100%;height:auto;display:block;border-radius:14px}
 .lnf.out{box-shadow:0 0 0 2.5px #E5484D,0 3px 8px rgba(0,0,0,.3)}
 .lnf.out::after{content:"\2715";position:absolute;top:-6px;right:-6px;width:21px;height:21px;border-radius:50%;background:#E5484D;color:#fff;display:grid;place-items:center;font:800 12px var(--font-d);line-height:1;box-shadow:0 0 0 2px #fff}
@@ -460,6 +467,7 @@ body{overflow-x:hidden}
 .ln-c .no{background:#E5484D}
 .ln-seg{margin:0 0 10px}
 .ln-seg button{min-width:112px}
+.ln-seg button.droptgt{box-shadow:0 0 0 3px var(--ok);background:var(--ok);color:#fff}
 .lng.accusing .lnf:not(.out){cursor:crosshair}
 .lng.accusing .lnf:not(.out):hover{transform:translateY(-2px)}
 .lnf.last{animation:lastpulse 1.2s ease-in-out infinite}

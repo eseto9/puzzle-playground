@@ -50,11 +50,20 @@ function mountAlibi(root, ctx) {
   /* timeline board */
   const board = h('div', { class: 'al', style: '--T:' + T });
   board.append(h('div', { class: 'al-head' }, h('span', { class: 'al-pm' }, 'pm'), h('div', { class: 'al-hours' }, ...LD.range(T).map((t) => h('span', null, hourLabel(t))))));
-  const bars = [], tracks = [];
+  const bars = [], tracks = []; let pointerHandled = false;
   for (let a = 0; a < nS; a++) {
     const bar = h('div', { class: 'al-bar', style: '--c:' + ALC[a].c + ';--d:' + dur[a] }, h('span', null, dur[a] + 'h'));
-    const track = h('div', { class: 'al-track' }, ...LD.range(T).map((t) => h('button', { class: 'al-cell', 'aria-label': ALC[a].n + ' arrives at ' + hourLabel(t), onclick: () => place(a, t) })), bar);
+    const track = h('div', { class: 'al-track' }, ...LD.range(T).map((t) => h('button', { class: 'al-cell', 'aria-label': ALC[a].n + ' arrives at ' + hourLabel(t), onclick: () => { if (pointerHandled) return; place(a, t); } })), bar);
     board.append(h('div', { class: 'al-row' }, h('div', { class: 'al-who' }, tk(a), h('small', null, dur[a] + 'h')), track)); bars.push(bar); tracks.push(track);
+    let dragging = false, moved = false;
+    track.addEventListener('pointerdown', (ev) => { if (!ctx.active()) return; dragging = true; moved = false; try { track.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ } });
+    track.addEventListener('pointermove', (ev) => { if (!dragging || !ctx.active()) return; moved = true; dragSet(a, ev.clientX, track); });
+    const up = () => { if (dragging && moved) { pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0); } dragging = false; };
+    track.addEventListener('pointerup', up); track.addEventListener('pointercancel', up);
+  }
+  function dragSet(a, clientX, track) {
+    const r = track.getBoundingClientRect(); const frac = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    const t = Math.round(frac * (T - 1)); st[a] = Math.min(t, T - dur[a]); draw();
   }
   const clueEls = clues.map((c) => {
     const two = c.b != null; const txt = alText(P, c);

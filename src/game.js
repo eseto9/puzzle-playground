@@ -120,10 +120,11 @@ function mountJungle(root, ctx) {
   }
   const clueEls = clues.map(clueCard); const cluesEl = h('div', { class: 'clues' }, clueEls);
 
+  let pointerHandled = false;
   const board = h('div', { class: 'jb', style: '--cols:' + P.cols });
-  const cellEls = P.terr.map((t, i) => { const b = h('button', { class: 'cell ' + t, 'data-i': i, onclick: () => tapCell(i) }); board.append(b); return b; });
+  const cellEls = P.terr.map((t, i) => { const b = h('button', { class: 'cell ' + t, 'data-i': i, onclick: () => { if (pointerHandled) return; tapCell(i); } }); b.addEventListener('pointerdown', (ev) => { const occ = occupant(i); if (occ >= 0) startDrag(ev, occ, () => tapCell(i)); }); board.append(b); return b; });
   const tray = h('div', { class: 'tray' });
-  const trayEls = P.animals.map((_, a) => { const b = h('button', { class: 'slot', 'aria-label': info(a).name, onclick: () => tapTray(a) }, tok(a)); tray.append(b); return b; });
+  const trayEls = P.animals.map((_, a) => { const b = h('button', { class: 'slot', 'aria-label': info(a).name, onclick: () => { if (pointerHandled) return; tapTray(a); } }, tok(a)); b.addEventListener('pointerdown', (ev) => startDrag(ev, a, () => tapTray(a))); tray.append(b); return b; });
   const jgridEl = h('div', { class: 'jgrid', style: '--bf:' + (P.cols >= 3 ? 1.5 : 1.1) + 'fr' }, cluesEl, tray, board); root.append(jgridEl);
 
   const occupant = (i) => placed.indexOf(i);
@@ -149,6 +150,35 @@ function mountJungle(root, ctx) {
     if (occ === sel) { placed[sel] = -1; sel = null; draw(); return; }
     const from = placed[sel]; placed[sel] = i; if (occ >= 0) placed[occ] = from;
     sel = null; draw();
+  }
+  function placeAt(a, destCell) {
+    if (destCell == null) { placed[a] = -1; sel = null; draw(); return; }
+    const occ = occupant(destCell); if (occ === a) { sel = null; draw(); return; }
+    const from = placed[a]; placed[a] = destCell; if (occ >= 0) placed[occ] = from;
+    sel = null; draw();
+  }
+  function dropTargetAt(x, y) {
+    const el = document.elementFromPoint(x, y); if (!el) return undefined;
+    const cell = el.closest && el.closest('.cell'); if (cell) return +cell.getAttribute('data-i');
+    if (el.closest && el.closest('.tray')) return null;
+    return undefined;
+  }
+  let ghost = null;
+  function placeGhost(x, y) { if (ghost) ghost.style.cssText = `left:${x}px;top:${y}px`; }
+  function startDrag(ev, a, plainTap) {
+    if (!ctx.active()) return; const d = { moved: false }; const el = ev.currentTarget; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    ghost = h('div', { class: 'jg-ghost' }, info(a).em); document.body.append(ghost); placeGhost(ev.clientX, ev.clientY);
+    el.classList.add('dragsrc');
+    const move_ = (e) => { d.moved = true; placeGhost(e.clientX, e.clientY); const t = dropTargetAt(e.clientX, e.clientY); cellEls.forEach((c) => c.classList.remove('droptgt')); if (typeof t === 'number') cellEls[t].classList.add('droptgt'); };
+    const up = (e) => {
+      el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel);
+      el.classList.remove('dragsrc'); cellEls.forEach((c) => c.classList.remove('droptgt')); if (ghost) { ghost.remove(); ghost = null; }
+      if (d.moved) { const t = dropTargetAt(e.clientX, e.clientY); if (t !== undefined) placeAt(a, t); else draw(); }
+      else plainTap();
+      pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0);
+    };
+    const cancel = () => { el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel); el.classList.remove('dragsrc'); cellEls.forEach((c) => c.classList.remove('droptgt')); if (ghost) { ghost.remove(); ghost = null; } };
+    el.addEventListener('pointermove', move_); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', cancel);
   }
   draw();
   return { destroy() {}, reveal: () => { sol.forEach((c, a) => { placed[a] = c; }); sel = null; draw(); }, cheat: () => { sol.forEach((c, a) => { placed[a] = c; }); sel = null; draw(); }, celebrate: () => jgridEl.classList.add('won'), puzzle: { P, clues, sol },

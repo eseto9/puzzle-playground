@@ -2,8 +2,7 @@
 /* ---------- Friend race: five puzzles, fastest total time wins; rated with Elo.
    If you finish first, you watch a live read-only mirror of your friend's
    board until they finish too (or quit). ---------- */
-const PICKS = 5;
-const validPicks = (a) => Array.isArray(a) && a.length === PICKS && a.every((g) => typeof g === 'string' && GAMES[g]);
+const validPicks = (a, n) => Array.isArray(a) && a.length === n && n >= 1 && n <= 5 && a.every((g) => typeof g === 'string' && GAMES[g]);
 const GIVEUP_PENALTY = 60;
 function raceHud(games, oppName) {
   const nP = games.length;
@@ -42,7 +41,13 @@ function runRace(cfg) {
   }));
   unsubs.push(room.onPeers(() => {
     if (room.peers().some((p) => !p.sameTab)) { clearTimeout(leftTimer); leftTimer = null; }
-    else if (!leftTimer && !S.over) leftTimer = setTimeout(() => { if (!room.peers().some((p) => !p.sameTab)) end(true, 'Your friend disconnected.'); }, 6000);
+    else if (!leftTimer && !S.over) leftTimer = setTimeout(() => {
+      if (S.over || room.peers().some((p) => !p.sameTab)) return;
+      // only the side that actually finished can claim a win on disconnect; otherwise
+      // it's a void race, so the two sides can never both end up declared the winner
+      if (S.myDone) end(true, 'Your friend disconnected.');
+      else end(null, 'Connection to your friend was lost before the race finished.', true);
+    }, 8000);
   }));
   function startPuzzle(i) {
     const gid = games[i];
@@ -91,6 +96,12 @@ function runRace(cfg) {
     if (S.over) return; const wait = left ? 0 : S.celebUntil - performance.now(); if (wait > 50) { if (!S.pending) { S.pending = true; setTimeout(() => { S.pending = false; end(won, why, left); }, wait); } return; }
     S.over = true; clearTimeout(leftTimer); clearTimeout(graceT); unsubs.forEach((u) => { try { u(); } catch (e) { /* noop */ } }); teardownSpectate();
     try { room.leave(); } catch (e) { /* noop */ }
+    if (won == null) {
+      view(h('div', { class: 'wrap' }, h('div', { class: 'card result' },
+        h('h1', null, 'No result'), why ? h('p', { class: 'muted' }, why) : null,
+        h('div', { class: 'stack' }, h('button', { class: 'btn rival block', onclick: () => lobby() }, 'New room'), homeBtn()))));
+      return;
+    }
     const rating = eloApply(S.oppE == null ? 1200 : S.oppE, won ? 1 : 0); const delta = rating.now - rating.old;
     const t = (v, g) => (v != null ? (g ? 'gave up' : fmt(v)) : '\u2014');
     const rows = games.map((g, k) => h('tr', null, h('td', null, GAMES[g].em + ' ' + GAMES[g].name), h('td', { class: !S.gave[k] && S.times[k] != null && S.oppTimes[k] != null && S.times[k] < S.oppTimes[k] ? 'best' : '' }, t(S.times[k], S.gave[k])), h('td', { class: !S.oppGave[k] && S.times[k] != null && S.oppTimes[k] != null && S.oppTimes[k] < S.times[k] ? 'best' : '' }, t(S.oppTimes[k], S.oppGave[k]))));
@@ -109,33 +120,39 @@ function runRace(cfg) {
 const CODE_CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const makeCode = () => Array.from({ length: 4 }, () => CODE_CH[Math.floor(Math.random() * CODE_CH.length)]).join('');
 function lobby() {
-  App.screen = 'lobby'; const ok = !!App.room;
+  App.screen = 'lobby'; const ok = !!App.room; let n = 5;
   const input = h('input', { class: 'field', maxlength: 4, placeholder: 'Enter code', 'aria-label': 'Room code', autocomplete: 'off', autocapitalize: 'characters' });
+  const nBtns = LD.range(5).map((i) => h('button', { class: 'btn sm ' + (i === 4 ? 'you' : 'ghost'), 'aria-label': (i + 1) + ' puzzle' + (i ? 's' : ''), onclick: () => { n = i + 1; nBtns.forEach((b, k) => { b.className = 'btn sm ' + (k === i ? 'you' : 'ghost'); }); } }, String(i + 1)));
   view(h('div', { class: 'wrap' },
     h('div', { class: 'topbar' }, h('button', { class: 'icon-btn', 'aria-label': 'Back', onclick: () => home() }, '\u2190'), h('div', { class: 'ttl' }, 'Race a friend')),
-    h('p', { class: 'how' }, ok ? 'You each pick five puzzles in order. Then a quick draw goes down the list and flips a coin for every row to decide whose pick you both play. You race through them at your own pace, you can see which puzzle your friend is on and how fast they solved each, and the first to finish wins and moves Elo.' : 'Live rooms need this page opened signed in on claude.ai. You can still play the daily puzzle and practice.'),
-    h('div', { class: 'card' }, h('h2', null, 'Host'), h('p', { class: 'muted small' }, 'Get a code to share.'), h('button', { class: 'btn rival block', disabled: !ok, onclick: () => hostRoom() }, 'Create room')),
+    h('p', { class: 'how' }, ok ? 'You each pick puzzles in order. Then a quick draw goes down the list and flips a coin for every row to decide whose pick you both play. You race through them at your own pace, you can see which puzzle your friend is on and how fast they solved each, and the fastest total time wins and moves Elo.' : 'Live rooms need this page opened signed in on claude.ai. You can still play the daily puzzle and practice.'),
+    h('div', { class: 'card' }, h('h2', null, 'Host'), h('p', { class: 'muted small' }, 'Get a code to share.'),
+      h('div', { class: 'muted small', style: 'margin:10px 0 6px' }, 'Number of puzzles'), h('div', { class: 'stack', style: 'display:flex;gap:6px;margin-bottom:12px' }, nBtns),
+      h('button', { class: 'btn rival block', disabled: !ok, onclick: () => hostRoom(n) }, 'Create room')),
     h('div', { class: 'card', style: 'margin-top:12px' }, h('h2', null, 'Join'), h('p', { class: 'muted small' }, 'Got a code from a friend?'), input,
       h('button', { class: 'btn you block', style: 'margin-top:10px', disabled: !ok, onclick: () => { const c = input.value.trim().toUpperCase(); if (c.length !== 4) { toast('Codes have 4 letters.'); return; } joinRoom(c); } }, 'Join room'))));
 }
 async function enter(code) { try { return await App.room.join('h2h-' + code.toLowerCase()); } catch (e) { toast(e && e.code === 'not_permitted' ? 'Your account cannot use live rooms.' : 'Could not open the room. Try again.'); return null; } }
 async function oppLabel(room) { const o = room.peers().find((p) => !p.sameTab); if (!o || !o.by) return 'Friend'; const n = await names([o.by]); return n[o.by] || 'Friend'; }
-/* ---------- pick five each, then the draw ---------- */
-async function hostRoom() { const code = makeCode(); const room = await enter(code); if (room) pickLobby(room, true, code); }
-async function joinRoom(code) { const room = await enter(code); if (room) pickLobby(room, false, code); }
-function pickLobby(room, host, code) {
+/* ---------- pick N each, then the draw ---------- */
+async function hostRoom(n) { const code = makeCode(); const room = await enter(code); if (room) pickLobby(room, true, code, n); }
+async function joinRoom(code) { const room = await enter(code); if (room) pickLobby(room, false, code, null); }
+function pickLobby(room, host, code, n) {
   App.screen = 'lobby';
-  let mine = LD.shuffle(Math.random, GAME_IDS).slice(0, PICKS); let ready = false, theirs = null, theirReady = false, started = false, present = false; const offs = [];
+  let mine = n ? LD.shuffle(Math.random, GAME_IDS).slice(0, n) : null; let ready = false, theirs = null, theirReady = false, started = false, present = false; const offs = [];
   const clear = () => offs.forEach((f) => { try { f(); } catch (e) { /* noop */ } });
-  const emitPicks = () => room.emit('h2h', { t: 'picks', set: mine.slice(), ready }).catch(() => {});
+  const emitPicks = () => { if (mine) room.emit('h2h', { t: 'picks', set: mine.slice(), ready }).catch(() => {}); };
   const status = h('div', { class: 'who' }, h('i', { class: 'dot' }), h('span', null, host ? 'Waiting for a friend\u2026' : 'Looking for the host\u2026'));
   const list = h('div', { class: 'slots' }); const friendLine = h('div', { class: 'muted small', style: 'text-align:center;margin-top:10px;min-height:20px' }, '');
   const readyBtn = h('button', { class: 'btn you block', style: 'margin-top:12px', onclick: () => { ready = !ready; draw(); emitPicks(); maybeStart(); } }, 'Lock in my list');
-  const shuf = h('button', { class: 'btn ghost sm', onclick: () => { mine = LD.shuffle(Math.random, GAME_IDS).slice(0, PICKS); draw(); emitPicks(); } }, 'Shuffle my list');
+  const shuf = h('button', { class: 'btn ghost sm', onclick: () => { mine = LD.shuffle(Math.random, GAME_IDS).slice(0, n); draw(); emitPicks(); } }, 'Shuffle my list');
   function draw() {
-    list.replaceChildren(...mine.map((g, i) => h('div', { class: 'slot-row' }, h('span', { class: 'sl-n' }, i + 1),
-      h('select', { disabled: ready, 'aria-label': 'Puzzle ' + (i + 1), onchange: (e) => { mine[i] = e.target.value; emitPicks(); } }, GAME_IDS.map((id) => h('option', { value: id, selected: id === g }, GAMES[id].em + '  ' + GAMES[id].name))), h('span', { class: 'icon-btn sm ph' }))));
-    readyBtn.textContent = ready ? 'Locked in \u2713 (tap to edit)' : 'Lock in my list'; readyBtn.className = 'btn block ' + (ready ? 'ghost' : 'you'); readyBtn.disabled = !present; shuf.disabled = ready;
+    if (!mine) { list.replaceChildren(h('p', { class: 'muted small' }, 'Waiting for the host to set the number of puzzles\u2026')); readyBtn.disabled = true; shuf.disabled = true; }
+    else {
+      list.replaceChildren(...mine.map((g, i) => h('div', { class: 'slot-row' }, h('span', { class: 'sl-n' }, i + 1),
+        h('select', { disabled: ready, 'aria-label': 'Puzzle ' + (i + 1), onchange: (e) => { mine[i] = e.target.value; emitPicks(); } }, GAME_IDS.map((id) => h('option', { value: id, selected: id === g }, GAMES[id].em + '  ' + GAMES[id].name))), h('span', { class: 'icon-btn sm ph' }))));
+      readyBtn.textContent = ready ? 'Locked in \u2713 (tap to edit)' : 'Lock in my list'; readyBtn.className = 'btn block ' + (ready ? 'ghost' : 'you'); readyBtn.disabled = !present; shuf.disabled = ready;
+    }
     friendLine.textContent = !present ? '' : theirReady ? 'Your friend locked in their list \u2713' : 'Your friend is still choosing\u2026';
     status.firstChild.className = 'dot' + (present ? ' on' : ''); status.lastChild.textContent = present ? (host ? 'Friend joined.' : 'Connected to the host.') : (host ? 'Waiting for a friend\u2026' : 'Looking for the host\u2026');
   }
@@ -144,33 +161,37 @@ function pickLobby(room, host, code) {
     const seed = String(Date.now()) + Math.random().toString(36).slice(2, 6); room.emit('h2h', { t: 'start', m: seed, hs: mine.slice(), gs: theirs.slice() }).catch(() => {}); begin(seed, mine.slice(), theirs.slice());
   }
   async function begin(seed, hs, gs) { if (started) return; started = true; clear(); const name = await oppLabel(room); runReveal({ room, host, seed, hs, gs, oppName: name }); }
-  offs.push(room.onPeers(() => { present = room.peers().some((p) => !p.sameTab); draw(); if (present) emitPicks(); }));
+  offs.push(room.onPeers(() => {
+    present = room.peers().some((p) => !p.sameTab);
+    if (!host && present && !mine) { const h2 = room.peers().find((p) => !p.sameTab); const theirN = h2 && h2.presence && h2.presence.n; if (theirN >= 1 && theirN <= 5) { n = theirN; mine = LD.shuffle(Math.random, GAME_IDS).slice(0, n); } }
+    draw(); if (present) emitPicks();
+  }));
   offs.push(room.on('h2h', (msg) => {
     if (msg.sameTab || started) return; const d = msg.data || {};
-    if (d.t === 'picks' && validPicks(d.set)) { theirs = d.set.slice(); theirReady = !!d.ready; draw(); maybeStart(); }
-    else if (d.t === 'start' && !host && d.m && validPicks(d.hs) && validPicks(d.gs)) begin(d.m, d.hs.slice(), d.gs.slice());
+    if (d.t === 'picks' && n && validPicks(d.set, n)) { theirs = d.set.slice(); theirReady = !!d.ready; draw(); maybeStart(); }
+    else if (d.t === 'start' && !host && d.m && Array.isArray(d.hs) && validPicks(d.hs, d.hs.length) && validPicks(d.gs, d.hs.length)) begin(d.m, d.hs.slice(), d.gs.slice());
   }));
-  room.presence({ host }).catch(() => {}); draw();
+  room.presence(host ? { host, n } : { host }).catch(() => {}); draw();
   view(h('div', { class: 'wrap' }, h('div', { class: 'topbar' }, h('button', { class: 'icon-btn', 'aria-label': 'Leave room', onclick: () => { clear(); try { room.leave(); } catch (e) { /* noop */ } lobby(); } }, '\u2190'), h('div', { class: 'ttl' }, host ? 'Your room' : 'Room ' + code)),
     host ? h('div', { class: 'card', style: 'text-align:center' }, h('div', { class: 'muted' }, 'Tell your friend this code'), h('div', { class: 'code', 'aria-label': 'Room code ' + code.split('').join(' ') }, code), status) : h('div', { class: 'card', style: 'text-align:center' }, status),
-    h('div', { class: 'card', style: 'margin-top:12px' }, h('h2', null, 'Pick your five'), h('p', { class: 'muted small', style: 'margin:2px 0 10px' }, 'In the order you want them. Repeats are fine. Your friend picks five too, then a draw decides each row.'), list, h('div', { class: 'slot-ctl' }, shuf), readyBtn, friendLine)));
+    h('div', { class: 'card', style: 'margin-top:12px' }, h('h2', null, 'Pick your puzzles'), h('p', { class: 'muted small', style: 'margin:2px 0 10px' }, 'In the order you want them. Repeats are fine. Your friend picks the same number, then a draw decides each row.'), list, h('div', { class: 'slot-ctl' }, shuf), readyBtn, friendLine)));
 }
 /* both lists side by side, then a coin flip down each row decides what we play */
 function runReveal(cfg) {
-  const { room, host, seed, hs, gs, oppName } = cfg; const mine = host ? hs : gs, theirs = host ? gs : hs; const rr = LD.makeRng('rv|' + seed); const timers = []; let gone = false;
+  const { room, host, seed, hs, gs, oppName } = cfg; const mine = host ? hs : gs, theirs = host ? gs : hs; const rr = LD.makeRng('rv|' + seed); const timers = []; let gone = false; const n = hs.length;
   const T = (fn, ms) => { timers.push(setTimeout(() => { if (!gone) fn(); }, ms)); };
-  const outcome = LD.range(PICKS).map((i) => (LD.makeRng('flip|' + seed + '|' + i)() < 0.5 ? 'host' : 'guest'));
+  const outcome = LD.range(n).map((i) => (LD.makeRng('flip|' + seed + '|' + i)() < 0.5 ? 'host' : 'guest'));
   const final = outcome.map((o, i) => (o === 'host' ? hs[i] : gs[i])); const mineWins = outcome.map((o) => (o === 'host') === host);
   const card = (g, side) => h('div', { class: 'rv-card ' + side }, h('span', { class: 'em' }, GAMES[g].em), GAMES[g].name);
-  const rows = LD.range(PICKS).map((i) => h('div', { class: 'rv-row pre' }, card(mine[i], 'L'), h('span', { class: 'rv-n' }, i + 1), card(theirs[i], 'R')));
-  const chips = LD.range(PICKS).map((i) => h('div', { class: 'rv-chip' }, i + 1)); const go = h('div', { class: 'rv-go' }, '');
+  const rows = LD.range(n).map((i) => h('div', { class: 'rv-row pre' }, card(mine[i], 'L'), h('span', { class: 'rv-n' }, i + 1), card(theirs[i], 'R')));
+  const chips = LD.range(n).map((i) => h('div', { class: 'rv-chip' }, i + 1)); const go = h('div', { class: 'rv-go' }, '');
   const reduce = reduceMotion();
   view(h('div', { class: 'wrap' }, h('div', { class: 'topbar' }, h('div', { class: 'ttl' }, 'The draw', h('span', { class: 'sub' }, 'A coin flip on every row picks whose puzzle we both play'))),
     h('div', { class: 'rv-cols' }, h('b', null, 'You'), h('span'), h('b', null, oppName)), ...rows, h('div', { class: 'rv-final' }, h('small', null, 'Your race lineup'), h('div', { class: 'rv-chips' }, chips)), go));
   current = { destroy() { gone = true; timers.forEach(clearTimeout); } };
   const spark = (el) => { for (let k = 0; k < 12; k++) { const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 60; const p = h('i', { class: 'rv-spark' }); p.style.cssText = `--c:${CONF[k % CONF.length]};--dx:${(Math.cos(a) * sp).toFixed(0)}px;--dy:${(Math.sin(a) * sp).toFixed(0)}px;--r:0deg;--t:.8s`; el.append(p); setTimeout(() => p.remove(), 900); } };
   rows.forEach((r, i) => T(() => r.classList.remove('pre'), 150 + i * 170));
-  const start0 = 150 + PICKS * 170 + 650;
+  const start0 = 150 + n * 170 + 650;
   function resolveRow(i, at) {
     const row = rows[i]; const L = row.querySelector('.L'), R = row.querySelector('.R'); const win = mineWins[i] ? L : R, lose = mineWins[i] ? R : L;
     T(() => row.classList.add('act'), at);
@@ -181,7 +202,7 @@ function runReveal(cfg) {
     T(() => { L.classList.remove('hot'); R.classList.remove('hot'); win.classList.add('win'); lose.classList.add('lose'); spark(win); chips[i].textContent = GAMES[final[i]].em; chips[i].classList.add('on'); go.textContent = GAMES[final[i]].name + ' it is'; }, t);
     T(() => row.classList.remove('act'), t + 650); return t + 700;
   }
-  let at = start0; for (let i = 0; i < PICKS; i++) at = resolveRow(i, at);
+  let at = start0; for (let i = 0; i < n; i++) at = resolveRow(i, at);
   T(() => { go.textContent = 'Race starts now!'; }, at + 200);
   T(() => { gone = true; runRace({ host, seed, room, oppName, set: final }); }, at + 1300);
 }

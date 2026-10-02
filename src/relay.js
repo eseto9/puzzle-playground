@@ -29,16 +29,18 @@ function webDb() {
     connectP = (window.mqtt ? Promise.resolve() : loadScript(MQTT_SRC)).then(() => new Promise((resolve) => {
       let relay = 0;
       const tryConnect = () => {
-        const c = window.mqtt.connect(WEB_RELAYS[relay % WEB_RELAYS.length], { clientId: 'wd' + Math.random().toString(36).slice(2, 10), clean: true, keepalive: 30, reconnectPeriod: 4000, connectTimeout: 8000 });
-        let done = false;
-        c.on('connect', () => { if (done) return; done = true; client = c; c.subscribe(WEB_NS + 'lb/+', { qos: 0 }); resolve(c); });
+        const c = window.mqtt.connect(WEB_RELAYS[relay % WEB_RELAYS.length], { clientId: 'wd' + Math.random().toString(36).slice(2, 10), clean: true, keepalive: 30, reconnectPeriod: 4000, connectTimeout: 10000 });
+        let done = false; let watchdog = null;
+        const rotate = () => { if (client !== c) return; try { c.end(true); } catch (e) { /* ignore */ } client = null; relay++; tryConnect(); };
+        c.on('connect', () => { if (!done) { done = true; client = c; c.subscribe(WEB_NS + 'lb/+', { qos: 0 }); resolve(c); } clearTimeout(watchdog); });
+        c.on('close', () => { if (done && client === c) { clearTimeout(watchdog); watchdog = setTimeout(rotate, 10000); } });
         c.on('message', (t, buf) => {
           let d; try { d = JSON.parse(new TextDecoder().decode(buf)); } catch (e) { return; }
           if (!d || typeof d !== 'object') return;
           const id = t.slice((WEB_NS + 'lb/').length); if (!id) return;
           rows.set(id, d); listeners.forEach((cb) => { try { cb(); } catch (e) { /* ignore */ } });
         });
-        setTimeout(() => { if (!done) { done = true; try { c.end(true); } catch (e) { /* ignore */ } if (relay < WEB_RELAYS.length - 1) { relay++; tryConnect(); } else resolve(null); } }, 8000);
+        setTimeout(() => { if (!done) { try { c.end(true); } catch (e) { /* ignore */ } if (relay < WEB_RELAYS.length - 1) { relay++; tryConnect(); } else resolve(null); } }, 8000);
       };
       tryConnect();
     })).catch(() => null);
@@ -66,7 +68,7 @@ function webDb() {
    the artifact's live room, scoped to one room id over the relay ---------- */
 function webRoom(id) {
   const ME = 'w' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
-  const HEARTBEAT = 2000, TIMEOUT = 7000;
+  const HEARTBEAT = 2000, TIMEOUT = 14000;
   const known = new Map([[ME, { presence: Object.freeze({}), updatedAt: Date.now(), seen: Infinity }]]);
   const frozen = new Map(), topics = new Map(), peerHandlers = new Set();
   const pending = { joined: new Set([ME]), left: new Map(), updated: new Set() };
@@ -110,11 +112,14 @@ function webRoom(id) {
   function connect() {
     const tryConnect = () => {
       const url = WEB_RELAYS[relay % WEB_RELAYS.length];
-      const c = window.mqtt.connect(url, { clientId: ME, clean: true, keepalive: 20, reconnectPeriod: 3000, connectTimeout: 8000, will: { topic: base + 'p/' + ME, payload: JSON.stringify({ bye: 1 }), qos: 0, retain: false } });
-      client = c; let ever = false;
-      c.on('connect', () => { ever = true; c.subscribe(base + '#', { qos: 0 }, () => { pub('hello', { from: ME }); announce(); }); });
+      const c = window.mqtt.connect(url, { clientId: ME, clean: true, keepalive: 20, reconnectPeriod: 4000, connectTimeout: 10000, will: { topic: base + 'p/' + ME, payload: JSON.stringify({ bye: 1 }), qos: 0, retain: false } });
+      client = c; let ever = false; let watchdog = null;
+      const rotate = () => { if (client !== c) return; try { c.end(true); } catch (e) { /* ignore */ } relay++; tryConnect(); };
+      const armWatchdog = () => { clearTimeout(watchdog); watchdog = setTimeout(rotate, 10000); };
+      c.on('connect', () => { ever = true; clearTimeout(watchdog); c.subscribe(base + '#', { qos: 0 }, () => { pub('hello', { from: ME }); announce(); }); });
       c.on('message', onMessage);
-      setTimeout(() => { if (client === c && !ever) { relay++; if (relay < WEB_RELAYS.length) tryConnect(); } }, 9000);
+      c.on('close', () => { if (client === c && ever) armWatchdog(); });
+      setTimeout(() => { if (client === c && !ever) rotate(); }, 9000);
     };
     (window.mqtt ? Promise.resolve() : loadScript(MQTT_SRC)).then(tryConnect).catch(() => {});
   }

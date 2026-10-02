@@ -26,17 +26,19 @@ const reduceMotion = () => { try { return window.matchMedia('(prefers-reduced-mo
 
 /* ---------- completion celebration ---------- */
 const CONF = ['#FF5A5F', '#FF9F1C', '#FFD23F', '#2EC4B6', '#3A86FF', '#8338EC', '#FF4D9D'];
-function celebrate(sw, timeTxt) {
-  const box = h('div', { class: 'cele', 'aria-hidden': 'true' });
+function celebrate(sw, timeTxt, onNext) {
+  const box = h('div', { class: 'cele' });
   if (!reduceMotion()) {
     for (let k = 0; k < 54; k++) {
-      const ang = Math.random() * Math.PI * 2; const sp = 80 + Math.random() * 190; const p = h('i', { class: 'cf' });
+      const ang = Math.random() * Math.PI * 2; const sp = 80 + Math.random() * 190; const p = h('i', { class: 'cf', 'aria-hidden': 'true' });
       p.style.cssText = `--c:${CONF[k % CONF.length]};--dx:${(Math.cos(ang) * sp).toFixed(0)}px;--dy:${(Math.sin(ang) * sp + 130).toFixed(0)}px;--r:${(Math.random() * 760 - 380).toFixed(0)}deg;--s:${(0.65 + Math.random() * 0.9).toFixed(2)};--t:${(0.95 + Math.random() * 0.7).toFixed(2)}s;--sh:${Math.random() < 0.5 ? '50%' : '2px'}`;
       box.append(p);
     }
-    box.append(h('i', { class: 'ring' }), h('i', { class: 'ring r2' }));
+    box.append(h('i', { class: 'ring', 'aria-hidden': 'true' }), h('i', { class: 'ring r2', 'aria-hidden': 'true' }));
   }
-  box.append(h('div', { class: 'badge', html: '<svg viewBox="0 0 52 52" aria-hidden="true"><circle class="cc" cx="26" cy="26" r="23"/><path class="ck" d="M15 27l8 8 15-17"/></svg>' }, h('b', null, 'Solved'), h('span', null, timeTxt)));
+  const badgeKids = [h('b', null, 'Solved'), h('span', null, timeTxt)];
+  if (onNext) badgeKids.push(h('button', { class: 'btn you sm', style: 'margin-top:10px', onclick: onNext }, 'Continue →'));
+  box.append(h('div', { class: 'badge', html: '<svg viewBox="0 0 52 52" aria-hidden="true"><circle class="cc" cx="26" cy="26" r="23"/><path class="ck" d="M15 27l8 8 15-17"/></svg>' }, ...badgeKids));
   sw.append(box); return box;
 }
 
@@ -63,9 +65,12 @@ function playScreen(o) {
       const res = { time: Math.round(t * 10) / 10, gameId: o.gameId, at: performance.now() };
       if (o.onSolveNow) o.onSolveNow(res);
       try { game && game.celebrate && game.celebrate(); } catch (e) { /* ignore */ }
-      stage.classList.add('pulse'); celebrate(sw, fmt(t));
+      stage.classList.add('pulse');
+      let advanced = false; let nextT = null;
+      const advance = () => { if (advanced) return; advanced = true; clearTimeout(nextT); if (o.onSolved) o.onSolved(res); };
+      celebrate(sw, fmt(t), o.onSolved ? advance : null);
       const delay = reduceMotion() ? 500 : o.fast ? 1000 : 1600;
-      timers.push(setTimeout(() => { if (o.onSolved) o.onSolved(res); }, delay));
+      nextT = setTimeout(advance, delay); timers.push(nextT);
     },
   };
   function giveUp() {
