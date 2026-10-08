@@ -7,7 +7,7 @@
    Same trick as the Whereabouts project (github.com/eseto9/Whereabouts).
    ========================================================= */
 const WEB_RELAYS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
-const WEB_NS = 'witsend-eseto9/v1/';
+const WEB_NS = 'witsend-eseto9/v2/';
 const MQTT_SRC = 'https://cdn.jsdelivr.net/npm/mqtt@5.16.0/dist/mqtt.min.js';
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
 

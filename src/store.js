@@ -1,7 +1,7 @@
 'use strict';
 const App = { uid: 'local', db: null, user: null, room: null, rec: null, board: new Map(), listeners: [], screen: 'home' };
-const LS_KEY = 'logicduel:rec:v6';
-const defRec = () => ({ v: 6, name: '', daily: {}, elo: { r: 1200, n: 0 } });
+const LS_KEY = 'logicduel:rec:v7';
+const defRec = () => ({ v: 7, name: '', daily: {}, elo: { r: 1200, n: 0 } });
 function lsGet() { try { const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 function lsSet(r) { try { localStorage.setItem(LS_KEY, JSON.stringify(r)); } catch (e) { /* unavailable */ } }
 function stable(o) { if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']'; if (o && typeof o === 'object') return '{' + Object.keys(o).sort().map((k) => JSON.stringify(k) + ':' + stable(o[k])).join(',') + '}'; return JSON.stringify(o); }
