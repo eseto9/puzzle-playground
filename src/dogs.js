@@ -59,7 +59,7 @@ function mountDogs(root, ctx) {
       case 'adj': inner = h('div', { class: 'dg-pair' }, ico(c.a), h('i', { class: 'ht', html: HEART }), ico(c.b)); caption = 'Side by side'; break;
       case 'nadj': inner = h('div', { class: 'dg-pair' }, ico(c.a), h('i', { class: 'ht', html: BROKEN }), ico(c.b)); caption = 'Not side by side'; break;
       case 'left': inner = h('div', { class: 'dg-pair' }, ico(c.a), h('i', { class: 'ar', html: ARROW_R }), ico(c.b)); caption = 'Left of'; break;
-      case 'between': inner = h('div', { class: 'dg-pair' }, ico(c.b), h('i', { class: 'dots' }), ico(c.a, true), h('i', { class: 'dots' }), ico(c.c)); caption = 'In between'; break;
+      case 'between': inner = h('div', { class: 'dg-between' }, h('div', { class: 'dg-bgroup' }, ico(c.b), ico(c.c)), h('i', { class: 'dg-bdown', 'aria-hidden': 'true' }, '▼'), ico(c.a, true)); caption = 'Between these two — any order'; break;
       default: inner = h('div', { class: 'dg-pair' }, ico(c.a), h('i', { class: 'gapsil', html: SIL }), ico(c.b)); caption = 'One dog apart';
     }
     const t = dgText(P, c);

@@ -585,6 +585,9 @@ body{overflow-x:hidden}
 .dg-pair .ar{display:block;width:24px;flex:none;line-height:0}
 .dg-pair .dots{display:block;width:12px;height:3px;border-top:3px dotted #8B8AA2;flex:none}
 .dg-pair .gapsil{display:block;width:26px;height:26px;color:#B2AFC4;flex:none;line-height:0}
+.dg-between{display:flex;flex-direction:column;align-items:center;gap:0}
+.dg-bgroup{display:flex;align-items:center;gap:3px;padding:3px 6px;border-radius:10px;background:rgba(139,138,162,.18);box-shadow:inset 0 0 0 1.5px rgba(139,138,162,.4)}
+.dg-bdown{font-size:9px;color:#8B8AA2;line-height:1;margin:1px 0}
 .dg-line{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:6px;max-width:440px;margin:0 auto}
 .dgb{position:relative;border:0;padding:6px 2px 4px;border-radius:16px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1.5px rgba(60,100,70,.25);cursor:grab;display:grid;justify-items:center;gap:0;transition:transform .2s,background .2s;touch-action:none}
 .dgb:active{cursor:grabbing}
@@ -1728,7 +1731,7 @@ function mountDogs(root, ctx) {
       case 'adj': inner = h('div', { class: 'dg-pair' }, ico(c.a), h('i', { class: 'ht', html: HEART }), ico(c.b)); caption = 'Side by side'; break;
       case 'nadj': inner = h('div', { class: 'dg-pair' }, ico(c.a), h('i', { class: 'ht', html: BROKEN }), ico(c.b)); caption = 'Not side by side'; break;
       case 'left': inner = h('div', { class: 'dg-pair' }, ico(c.a), h('i', { class: 'ar', html: ARROW_R }), ico(c.b)); caption = 'Left of'; break;
-      case 'between': inner = h('div', { class: 'dg-pair' }, ico(c.b), h('i', { class: 'dots' }), ico(c.a, true), h('i', { class: 'dots' }), ico(c.c)); caption = 'In between'; break;
+      case 'between': inner = h('div', { class: 'dg-between' }, h('div', { class: 'dg-bgroup' }, ico(c.b), ico(c.c)), h('i', { class: 'dg-bdown', 'aria-hidden': 'true' }, '▼'), ico(c.a, true)); caption = 'Between these two — any order'; break;
       default: inner = h('div', { class: 'dg-pair' }, ico(c.a), h('i', { class: 'gapsil', html: SIL }), ico(c.b)); caption = 'One dog apart';
     }
     const t = dgText(P, c);
