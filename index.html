@@ -2057,7 +2057,7 @@ const levelFor = (gid, seed) => LD.pick(LD.makeRng('L|' + gid + '|' + seed), GAM
 function puzzleFor(gid, seed) {
   const key = gid + '|' + seed; if (PCACHE_UI[key]) return PCACHE_UI[key];
   const level = levelFor(gid, seed); let P = null, err = null;
-  for (let k = 0; k < 6 && !P; k++) { try { P = GAMES[gid].gen(LD.makeRng('P|' + gid + '|' + seed + '|' + k), level); } catch (e) { err = e; } }
+  for (let k = 0; k < 12 && !P; k++) { try { P = GAMES[gid].gen(LD.makeRng('P|' + gid + '|' + seed + '|' + k), level); } catch (e) { err = e; } }
   if (!P) throw err;
   PCACHE_UI[key] = P; PORDER.push(key); while (PORDER.length > 8) delete PCACHE_UI[PORDER.shift()];
   return P;
@@ -2397,7 +2397,10 @@ function playScreen(o) {
       nextT = setTimeout(advance, 6000); timers.push(nextT);
     });
   }
-  const begin = () => { game = G.mount(stage, ctx); t0 = performance.now(); running = true; if (o.onGo) o.onGo(); };
+  const begin = () => {
+    try { game = G.mount(stage, ctx); } catch (e) { console.warn('mount failed', e); toast('Couldn’t build that puzzle — try again.'); if (o.onQuit) o.onQuit(); else home(); return; }
+    t0 = performance.now(); running = true; if (o.onGo) o.onGo();
+  };
   if (o.countdown) {
     const num = h('div', { class: 'big' }, '3'); const cd = overlay(h('div', null, num, h('div', { class: 'sm' }, G.name)));
     timers.push(setTimeout(() => { try { puzzleFor(o.gameId, seed); } catch (e) { /* retried at mount */ } }, 80));

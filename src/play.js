@@ -100,7 +100,10 @@ function playScreen(o) {
       nextT = setTimeout(advance, 6000); timers.push(nextT);
     });
   }
-  const begin = () => { game = G.mount(stage, ctx); t0 = performance.now(); running = true; if (o.onGo) o.onGo(); };
+  const begin = () => {
+    try { game = G.mount(stage, ctx); } catch (e) { console.warn('mount failed', e); toast('Couldn’t build that puzzle — try again.'); if (o.onQuit) o.onQuit(); else home(); return; }
+    t0 = performance.now(); running = true; if (o.onGo) o.onGo();
+  };
   if (o.countdown) {
     const num = h('div', { class: 'big' }, '3'); const cd = overlay(h('div', null, num, h('div', { class: 'sm' }, G.name)));
     timers.push(setTimeout(() => { try { puzzleFor(o.gameId, seed); } catch (e) { /* retried at mount */ } }, 80));

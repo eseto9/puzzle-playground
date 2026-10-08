@@ -19,7 +19,7 @@ const levelFor = (gid, seed) => LD.pick(LD.makeRng('L|' + gid + '|' + seed), GAM
 function puzzleFor(gid, seed) {
   const key = gid + '|' + seed; if (PCACHE_UI[key]) return PCACHE_UI[key];
   const level = levelFor(gid, seed); let P = null, err = null;
-  for (let k = 0; k < 6 && !P; k++) { try { P = GAMES[gid].gen(LD.makeRng('P|' + gid + '|' + seed + '|' + k), level); } catch (e) { err = e; } }
+  for (let k = 0; k < 12 && !P; k++) { try { P = GAMES[gid].gen(LD.makeRng('P|' + gid + '|' + seed + '|' + k), level); } catch (e) { err = e; } }
   if (!P) throw err;
   PCACHE_UI[key] = P; PORDER.push(key); while (PORDER.length > 8) delete PCACHE_UI[PORDER.shift()];
   return P;
