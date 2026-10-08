@@ -2358,9 +2358,9 @@ function playScreen(o) {
       if (o.onSolveNow) o.onSolveNow(res);
       try { game && game.celebrate && game.celebrate(); } catch (e) { /* ignore */ }
       stage.classList.add('pulse');
-      let advanced = false; let nextT = null;
-      const advance = () => { if (advanced) return; advanced = true; clearTimeout(nextT); if (o.onSolved) o.onSolved(res); };
-      celebrate(sw, fmt(t), o.onSolved ? advance : null);
+      let advanced = false; let nextT = null; let box = null;
+      const advance = () => { if (advanced) return; advanced = true; clearTimeout(nextT); if (box) box.remove(); if (o.onSolved) o.onSolved(res); };
+      box = celebrate(sw, fmt(t), o.onSolved ? advance : null);
       const delay = reduceMotion() ? 500 : o.fast ? 1000 : 1600;
       nextT = setTimeout(advance, delay); timers.push(nextT);
     },
