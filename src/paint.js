@@ -20,7 +20,8 @@ function mountPaint(root, ctx) {
   function draw(pop) {
     work.innerHTML = `<svg viewBox="0 0 100 100" class="pt-svg live" aria-label="Your picture" role="img">${order.map((id) => `<g class="sh${pop === id ? ' pop' : ''}" data-id="${id}">${paintShapeSVG(P.shapes[id])}</g>`).join('')}</svg>`;
     chips.replaceChildren(...order.slice().reverse().map((id) => {
-      const b = h('button', { class: 'pt-chip', 'aria-label': 'Layer, drag to reorder or tap to move', html: chipSVG(P.shapes[id]) });
+      const b = h('button', { class: 'pt-chip', 'aria-label': 'Layer, drag up or down to reorder, or tap to move to front/back' },
+        h('span', { class: 'pt-chip-ic', html: chipSVG(P.shapes[id]) }), h('span', { class: 'pt-chip-hd', 'aria-hidden': 'true' }, '☰'));
       b.dataset.id = id; b.addEventListener('pointerdown', (ev) => startDrag(ev, b)); b.addEventListener('click', () => { if (b.dataset.dragged) { delete b.dataset.dragged; return; } move(id); });
       return b;
     }));
