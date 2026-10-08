@@ -17,7 +17,7 @@ function webIdentity() {
   if (!id || !/^w[a-z0-9]{10,24}$/.test(id)) { id = 'w' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 8); try { localStorage.setItem('witsend:uid', id); } catch (e) { /* ignore */ } }
   return id;
 }
-function webUser(uid) { return { async id() { return uid; }, async profiles(ids) { const out = {}; ids.forEach((i) => { out[i] = (App.board.get(i) || {}).name || ''; }); return out; } }; }
+function webUser(uid) { return { async id() { return uid; }, async profiles(ids) { const out = {}; ids.forEach((i) => { out[i] = { name: (App.board.get(i) || {}).name || '' }; }); return out; } }; }
 
 /* ---------- db shim: same doc()/collection() shape as the artifact's db,
    backed by retained messages on the relay (a newcomer gets everyone's

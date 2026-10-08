@@ -89,6 +89,10 @@ h2{font-size:21px;font-weight:700}
 .tabs{display:flex;gap:6px;margin:16px 0 8px}
 .tab{border:0;background:transparent;padding:7px 12px;border-radius:99px;font-weight:600;font-size:14px;cursor:pointer;color:var(--muted)}
 .tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.gpicker{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.gpicker[hidden]{display:none}
+.gpick{width:34px;height:34px;border-radius:10px;border:0;font-size:17px;display:grid;place-items:center;background:var(--surface2);cursor:pointer;opacity:.55}
+.gpick.on{opacity:1;box-shadow:0 0 0 2px var(--tc,var(--ink)) inset;background:color-mix(in srgb,var(--tc,#888) 20%,var(--surface))}
 .board{display:grid;gap:2px}
 .brow{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;padding:9px 10px;border-radius:10px;font-size:15px}
 .brow.me{background:var(--you-soft);font-weight:600}
@@ -269,8 +273,6 @@ h2{font-size:21px;font-weight:700}
 .rtab td.best{font-weight:800;color:var(--ok)}
 .rtab tr.tot td{font:800 16px var(--font-d);border-top:2px solid var(--line-strong)}
 .rtab th:not(:first-child),.rtab td:not(:first-child){text-align:right}
-.today{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-.today b{font:700 18px var(--font-d)}
 .gem{display:grid;place-items:center;width:44px;height:44px;border-radius:13px;font-size:24px;flex:none;background:color-mix(in srgb,var(--tc,#888) 18%,var(--surface))}
 .tile .gem{width:40px;height:40px;font-size:21px}
 
@@ -2104,7 +2106,7 @@ function webIdentity() {
   if (!id || !/^w[a-z0-9]{10,24}$/.test(id)) { id = 'w' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 8); try { localStorage.setItem('witsend:uid', id); } catch (e) { /* ignore */ } }
   return id;
 }
-function webUser(uid) { return { async id() { return uid; }, async profiles(ids) { const out = {}; ids.forEach((i) => { out[i] = (App.board.get(i) || {}).name || ''; }); return out; } }; }
+function webUser(uid) { return { async id() { return uid; }, async profiles(ids) { const out = {}; ids.forEach((i) => { out[i] = { name: (App.board.get(i) || {}).name || '' }; }); return out; } }; }
 
 /* ---------- db shim: same doc()/collection() shape as the artifact's db,
    backed by retained messages on the relay (a newcomer gets everyone's
@@ -2236,10 +2238,15 @@ function lsSet(r) { try { localStorage.setItem(LS_KEY, JSON.stringify(r)); } cat
 function stable(o) { if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']'; if (o && typeof o === 'object') return '{' + Object.keys(o).sort().map((k) => JSON.stringify(k) + ':' + stable(o[k])).join(',') + '}'; return JSON.stringify(o); }
 function mergeRec(a, b) {
   const o = defRec();
+  const take = (d, g, e) => { if (!g || !GAMES[g] || !e || typeof e.s !== 'number') return; if (!o.daily[d]) o.daily[d] = {}; if (!o.daily[d][g] || (e.at || 0) < (o.daily[d][g].at || 0)) o.daily[d][g] = { s: e.s, at: e.at || 0 }; };
   [a, b].forEach((x) => {
     if (!x || typeof x !== 'object') return;
     const dd = x.daily || {};
-    Object.keys(dd).forEach((d) => { const e = dd[d]; if (!e || typeof e.s !== 'number') return; if (!o.daily[d] || (e.at || 0) < (o.daily[d].at || 0)) o.daily[d] = e; });
+    Object.keys(dd).forEach((d) => {
+      const entry = dd[d]; if (!entry || typeof entry !== 'object') return;
+      if (typeof entry.s === 'number') take(d, entry.g, entry); // legacy flat shape: { s, at, g }
+      else Object.keys(entry).forEach((g) => take(d, g, entry[g])); // { [gid]: { s, at } }
+    });
     const el = x.elo || {}; if ((el.n | 0) > o.elo.n) o.elo = { r: +el.r || 1200, n: el.n | 0 };
     if (!o.name && typeof x.name === 'string' && x.name) o.name = x.name;
   });
@@ -2249,7 +2256,8 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const dstr = (d) => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 const todayStr = () => dstr(new Date());
 function addDays(s, n) { const [y, m, d] = s.split('-').map(Number); return dstr(new Date(y, m - 1, d + n)); }
-function streak() { let d = App.rec.daily[todayStr()] ? todayStr() : addDays(todayStr(), -1); let n = 0; while (App.rec.daily[d]) { n++; d = addDays(d, -1); } return n; }
+const hasDaily = (d) => { const day = App.rec.daily[d]; return !!day && Object.keys(day).length > 0; };
+function streak() { let d = hasDaily(todayStr()) ? todayStr() : addDays(todayStr(), -1); let n = 0; while (hasDaily(d)) { n++; d = addDays(d, -1); } return n; }
 const notify = () => App.listeners.slice().forEach((f) => { try { f(); } catch (e) { console.warn(e); } });
 let saveChain = Promise.resolve();
 function saveRec() {
@@ -2292,23 +2300,29 @@ async function names(ids) {
   try { if (App.user && App.user.profiles && ids.length) { const ps = await App.user.profiles(ids); ids.forEach((i) => { out[i] = (ps[i] && ps[i].name) || ''; }); } } catch (e) { /* ignore */ }
   return out;
 }
-function boardView() {
-  let tab = 'today';
+function boardView(initialGid) {
+  let tab = 'today'; let gid = (initialGid && GAMES[initialGid]) ? initialGid : GAME_IDS[0];
   const defs = [['today', 'Today'], ['yest', 'Yesterday'], ['elo', 'Elo']];
   const tabs = h('div', { class: 'tabs', role: 'tablist' });
+  const picker = h('div', { class: 'gpicker' });
   const body = h('div', { class: 'board', 'aria-live': 'polite' }); const note = h('div', { class: 'note' });
-  defs.forEach(([k, l]) => tabs.append(h('button', { class: 'tab', role: 'tab', 'aria-selected': String(k === tab), onclick: () => { tab = k; [...tabs.children].forEach((b, i) => b.setAttribute('aria-selected', String(defs[i][0] === tab))); draw(); } }, l)));
-  const root = h('div', null, tabs, body, note); let seq = 0;
+  defs.forEach(([k, l]) => tabs.append(h('button', { class: 'tab', role: 'tab', 'aria-selected': String(k === tab), onclick: () => { tab = k; [...tabs.children].forEach((b, i) => b.setAttribute('aria-selected', String(defs[i][0] === tab))); drawPicker(); draw(); } }, l)));
+  function drawPicker() {
+    picker.hidden = tab === 'elo';
+    picker.replaceChildren(...GAME_IDS.map((id) => h('button', { class: 'gpick' + (id === gid ? ' on' : ''), style: '--tc:' + GAMES[id].tc, 'aria-label': GAMES[id].name, 'aria-pressed': String(id === gid), onclick: () => { gid = id; drawPicker(); draw(); } }, GAMES[id].em)));
+  }
+  const root = h('div', null, tabs, picker, body, note); let seq = 0;
   async function draw() {
     const my = ++seq; const date = tab === 'yest' ? addDays(todayStr(), -1) : todayStr(); let rows;
     if (tab === 'elo') rows = [...App.board].map(([id, d]) => ({ id, r: (d.elo && d.elo.r) || 1200, n: (d.elo && d.elo.n) || 0 })).filter((x) => x.n > 0).sort((a, b) => b.r - a.r || b.n - a.n);
-    else rows = [...App.board].map(([id, d]) => ({ id, e: d.daily && d.daily[date] })).filter((x) => x.e).sort((a, b) => a.e.s - b.e.s);
+    else rows = [...App.board].map(([id, d]) => ({ id, e: d.daily && d.daily[date] && d.daily[date][gid] })).filter((x) => x.e).sort((a, b) => a.e.s - b.e.s);
     const shown = rows.slice(0, 8); const mi = rows.findIndex((x) => x.id === App.uid); if (mi >= 8) shown.push(rows[mi]);
     const nm = await names(shown.map((x) => x.id)); if (my !== seq) return;
-    if (!rows.length) body.replaceChildren(h('div', { class: 'empty' }, tab === 'elo' ? 'No ranked races yet. Race a friend to get on the Elo board.' : tab === 'today' ? 'No times yet today. Be the first on the board.' : 'Nobody posted yesterday.'));
+    if (!rows.length) body.replaceChildren(h('div', { class: 'empty' }, tab === 'elo' ? 'No ranked races yet. Race a friend to get on the Elo board.' : tab === 'today' ? 'No times yet today for ' + GAMES[gid].name + '. Be the first on the board.' : 'Nobody posted yesterday for ' + GAMES[gid].name + '.'));
     else body.replaceChildren(...shown.map((x) => { const me = x.id === App.uid; const nmTxt = nm[x.id] || (me ? 'You' : 'Player'); return h('div', { class: 'brow' + (me ? ' me' : '') }, h('span', { class: 'rk' }, rows.indexOf(x) + 1), h('span', { class: 'nm' }, nmTxt + (me && nm[x.id] ? ' (you)' : '')), h('div', { class: 'sc' }, tab === 'elo' ? String(x.r) : fmt(x.e.s), tab === 'elo' ? h('small', null, x.n + (x.n === 1 ? ' race' : ' races')) : null)); }));
     note.textContent = App.db && App.uid !== 'local' ? (tab === 'elo' ? 'Elo rating from live races against friends. Everyone starts at 1200.' : 'Fastest solve wins. New puzzle at midnight, your time.') : 'Times are kept on this device. Open this page signed in to claude.ai to share a live board.';
   }
+  drawPicker();
   const refresh = () => { if (!root.isConnected) { App.listeners = App.listeners.filter((f) => f !== refresh); return; } draw(); };
   App.listeners.push(refresh); draw(); return root;
 }
@@ -2335,12 +2349,20 @@ function promptName(current) {
   return new Promise((res) => {
     const inp = h('input', { class: 'field sm', placeholder: 'Your name', maxlength: 18, autocomplete: 'off', value: current || '' });
     const close = (v) => { m.remove(); res(v); };
+    const save = () => { const v = inp.value.trim().slice(0, 18); if (v) close(v); };
+    const saveBtn = h('button', { class: 'btn', disabled: !inp.value.trim(), onclick: save }, 'Save');
     const m = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' }, h('div', { class: 'box' },
-      h('p', null, 'Add your name so others can see it on the board.'), inp,
-      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: () => close(null) }, 'Skip'), h('button', { class: 'btn', onclick: () => close(inp.value.trim().slice(0, 18)) }, 'Save'))));
+      h('p', null, 'Pick a name so everyone can see who’s on the leaderboard. A name is required to post a time.'), inp,
+      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: () => close(null) }, 'Not now'), saveBtn)));
     document.body.append(m); setTimeout(() => inp.focus(), 50);
-    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') close(inp.value.trim().slice(0, 18)); });
+    inp.addEventListener('input', () => { saveBtn.disabled = !inp.value.trim(); });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
   });
+}
+function ensureName(cb) {
+  const shared = App.db && App.uid !== 'local';
+  if (!shared || App.rec.name) { cb(); return; }
+  promptName('').then((nm) => { if (nm) { App.rec.name = nm; saveRec(); cb(); } });
 }
 const reduceMotion = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
 
@@ -2441,31 +2463,23 @@ function playScreen(o) {
   current = ctl; return ctl;
 }
 const homeBtn = () => h('button', { class: 'btn ghost block', onclick: () => home() }, 'Back to home');
-function dailyPick(date) { const [y, m, d] = date.split('-').map(Number); const day = Math.floor(Date.UTC(y, m - 1, d) / 86400000); return { gid: GAME_IDS[day % GAME_IDS.length], seed: 'daily-' + date }; }
-function startDaily() {
-  const date = todayStr(); const { gid, seed } = dailyPick(date); App.screen = 'play';
+const dailySeed = (date, gid) => 'daily-' + date + '-' + gid;
+function startDaily(gid) {
+  const date = todayStr(); const seed = dailySeed(date, gid); App.screen = 'play';
   playScreen({ gameId: gid, seed, title: 'Today\u2019s puzzle', sub: GAMES[gid].name + ' \u00B7 ' + date, onQuit: () => home(),
-    onGiveUp: () => view(h('div', { class: 'wrap' }, h('div', { class: 'card result' }, h('div', { class: 'muted' }, GAMES[gid].name), h('h1', null, 'Answer revealed'), h('p', { class: 'muted small' }, 'No time posted. Solve it fully to get on today\u2019s board.'), h('div', { class: 'stack' }, h('button', { class: 'btn you block', onclick: () => startDaily() }, 'Try again'), h('button', { class: 'btn ghost block', onclick: () => startRandom(gid) }, 'Play another ' + GAMES[gid].name), homeBtn())))),
+    onGiveUp: () => view(h('div', { class: 'wrap' }, h('div', { class: 'card result' }, h('div', { class: 'muted' }, GAMES[gid].name), h('h1', null, 'Answer revealed'), h('p', { class: 'muted small' }, 'No time posted. Solve it fully to get on today\u2019s board.'), h('div', { class: 'stack' }, h('button', { class: 'btn you block', onclick: () => startDaily(gid) }, 'Try again'), h('button', { class: 'btn ghost block', onclick: () => startRandom(gid) }, 'Play another ' + GAMES[gid].name), homeBtn())))),
     onSolved: (res) => {
-      const ranked = !App.rec.daily[date]; const shared = App.db && App.uid !== 'local';
-      const post = () => {
-        if (ranked) { App.rec.daily[date] = { s: res.time, at: Date.now(), g: gid }; saveRec(); }
-        showResult();
-      };
-      if (ranked && shared && !App.rec.name) promptName('').then((nm) => { if (nm) App.rec.name = nm; post(); });
-      else post();
-      function showResult() {
-      const mine = App.rec.daily[date];
-      const rows = [...App.board].map(([, d]) => d.daily && d.daily[date]).filter(Boolean).sort((a, b) => a.s - b.s);
+      const ranked = !(App.rec.daily[date] && App.rec.daily[date][gid]);
+      if (ranked) { if (!App.rec.daily[date]) App.rec.daily[date] = {}; App.rec.daily[date][gid] = { s: res.time, at: Date.now() }; saveRec(); }
+      const mine = App.rec.daily[date][gid];
+      const rows = [...App.board].map(([, d]) => d.daily && d.daily[date] && d.daily[date][gid]).filter(Boolean).sort((a, b) => a.s - b.s);
       const rank = rows.findIndex((e) => e.s === mine.s && e.at === mine.at) + 1;
       view(h('div', { class: 'wrap' },
         h('div', { class: 'card result' }, h('div', { class: 'muted' }, GAMES[gid].name + (ranked ? ' solved' : ' solved again')), h('div', { class: 'big' }, fmt(res.time)),
           h('div', { class: 'pillrow' }, ranked && rank ? h('span', { class: 'chip' }, 'Rank ' + rank + ' of ' + rows.length) : h('span', { class: 'chip' }, 'Today\u2019s time ' + fmt(mine.s))),
           h('p', { class: 'muted small' }, ranked ? 'Your time is on today\u2019s board.' : 'You already posted today, so this run is unranked.'),
-          h('div', { class: 'stack' }, h('button', { class: 'btn you block', onclick: () => startRandom(LD.pick(Math.random, GAME_IDS)) }, 'Keep playing'), h('button', { class: 'btn ghost block', onclick: () => lobby() }, 'Race a friend'))),
-        h('div', { class: 'sec' }, h('h2', null, 'Today\u2019s board'), h('div', { class: 'card' }, boardView()))));
-      }
-    } });
+          h('div', { class: 'stack' }, h('button', { class: 'btn you block', onclick: () => startRandom(LD.pick(Math.random, GAME_IDS)) }, 'Keep playing'), h('button', { class: 'btn ghost block', onclick: () => home() }, 'Back to home'))),
+        h('div', { class: 'sec' }, h('h2', null, GAMES[gid].name + '\u2019s board'), h('div', { class: 'card' }, boardView(gid))))); } });
 }
 function startRandom(gid, seed) {
   seed = seed || newSeed(); App.screen = 'play'; const nextSeed = newSeed();
@@ -2690,28 +2704,36 @@ function runReveal(cfg) {
 
 /* ---------- home ---------- */
 function home() {
-  App.screen = 'home'; const date = todayStr(); const dp = dailyPick(date); const dg = dp.gid;
-  const recLine = h('div', { class: 'rec' }); const friendBtn = h('button', { class: 'btn rival', onclick: () => lobby() }, 'Race a friend');
-  const dailyBtn = h('button', { class: 'btn you block', onclick: () => startDaily() }, ''); const streakEl = h('span', { class: 'streak' });
+  App.screen = 'home';
+  const recLine = h('div', { class: 'rec' }); const friendBtn = h('button', { class: 'btn rival', onclick: () => ensureName(() => lobby()) }, 'Race a friend');
+  const streakEl = h('span', { class: 'streak' });
   const nameInput = h('input', { class: 'field sm', style: 'flex:1;min-width:0;width:auto', placeholder: 'Your name', maxlength: 18, autocomplete: 'off', value: App.rec.name || '' });
   const nameNote = h('div', { class: 'muted small', style: 'margin-top:6px' });
-  const nameSave = () => { const v = nameInput.value.trim().slice(0, 18); App.rec.name = v; saveRec(); nameNote.textContent = v ? 'Saved \u2014 this is what others see on the board.' : 'No name set \u2014 you\u2019ll show as \u201CPlayer\u201D.'; };
-  const nameField = h('div', { class: 'namefield' }, h('label', { class: 'muted small', for: 'nmIn' }, 'Your name on the leaderboard'), h('div', { style: 'display:flex;gap:8px;margin-top:4px' }, nameInput, h('button', { class: 'btn ghost sm', style: 'flex:none', onclick: nameSave }, 'Save')), nameNote);
+  const nameSave = () => { const v = nameInput.value.trim().slice(0, 18); if (!v) { nameNote.textContent = 'A name is required so others can see who\u2019s on the board.'; return; } App.rec.name = v; saveRec(); nameNote.textContent = 'Saved \u2014 this is what others see on the board.'; };
+  const nameField = h('div', { class: 'namefield' }, h('label', { class: 'muted small', for: 'nmIn' }, 'Your name on the leaderboard (required)'), h('div', { style: 'display:flex;gap:8px;margin-top:4px' }, nameInput, h('button', { class: 'btn ghost sm', style: 'flex:none', onclick: nameSave }, 'Save')), nameNote);
   nameInput.id = 'nmIn'; nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') nameSave(); });
+  const dailyGrid = h('div', { class: 'tiles' });
+  function drawDaily() {
+    const today = App.rec.daily[todayStr()] || {};
+    dailyGrid.replaceChildren(...GAME_IDS.map((id) => { const d = today[id];
+      return h('button', { class: 'tile', onclick: () => ensureName(() => startDaily(id)) },
+        h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em),
+        h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, d ? 'Solved \u00B7 ' + fmt(d.s) : 'Play today\u2019s')),
+        d ? h('span', { class: 'lv', style: 'color:var(--ok)' }, '\u2713') : null); }));
+  }
   function refresh() {
     if (App.screen !== 'home') return; const r = App.rec;
     recLine.textContent = App.room ? 'Your Elo ' + r.elo.r + (r.elo.n ? ' \u00B7 ' + r.elo.n + (r.elo.n === 1 ? ' race' : ' races') : '') : 'Live races need this page opened signed in on claude.ai';
     friendBtn.disabled = !App.room;
-    const d = r.daily[todayStr()]; dailyBtn.textContent = d ? 'Today\u2019s time ' + fmt(d.s) + '. Play again, unranked' : 'Play today\u2019s puzzle'; dailyBtn.className = 'btn block ' + (d ? 'ghost' : 'you');
     const s = streak(); streakEl.textContent = s ? s + ' day streak' : '';
     const shared = App.db && App.uid !== 'local'; nameField.hidden = !shared;
     if (shared && document.activeElement !== nameInput) nameInput.value = r.name || '';
+    drawDaily();
   }
   const hero = h('section', { class: 'hero', 'aria-label': 'Race a friend' },
     h('div', { class: 'lanes', 'aria-hidden': 'true' }, h('div', { class: 'lane-row' }, h('span', null, 'You'), h('div', { class: 'lane you', style: '--to:78%' }, h('i'))), h('div', { class: 'lane-row' }, h('span', null, 'Friend'), h('div', { class: 'lane rival', style: '--to:61%' }, h('i')))),
-    h('h1', null, 'Race a friend on puzzles you pick'), h('div', { class: 'cta-row' }, friendBtn, h('button', { class: 'btn you', onclick: () => startDaily() }, 'Daily puzzle')), recLine);
-  const daily = h('section', { class: 'sec' }, h('h2', null, 'Today\u2019s puzzle'),
-    h('div', { class: 'card' }, h('div', { class: 'today' }, h('span', { class: 'gem', style: '--tc:' + GAMES[dg].tc }, GAMES[dg].em), h('div', null, h('b', null, GAMES[dg].name), h('span', { class: 'muted small', style: 'display:block' }, GAMES[dg].blurb + '. A new puzzle every day.'))), dailyBtn));
+    h('h1', null, 'Race a friend on puzzles you pick'), h('div', { class: 'cta-row' }, friendBtn, h('button', { class: 'btn you', onclick: () => daily.scrollIntoView({ behavior: 'smooth' }) }, 'Today\u2019s puzzles')), recLine);
+  const daily = h('section', { class: 'sec' }, h('h2', null, 'Today\u2019s puzzles'), h('p', { class: 'muted small', style: 'margin:-4px 0 10px' }, 'One daily puzzle for each game \u2014 new ones at midnight, your time.'), dailyGrid);
   const leaderboard = h('section', { class: 'sec' }, h('h2', null, 'Leaderboard'), h('div', { class: 'card' }, nameField, boardView()));
   const tiles = h('div', { class: 'tiles' }, ...GAME_IDS.map((id) => h('button', { class: 'tile', onclick: () => startRandom(id) }, h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em), h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, GAMES[id].blurb)))),
     h('button', { class: 'tile wide', onclick: () => startSurprise() }, h('div', null, h('b', null, 'Surprise me'), h('span', { class: 'd' }, 'A random puzzle from a random game.'))));

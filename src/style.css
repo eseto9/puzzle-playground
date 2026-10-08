@@ -79,6 +79,10 @@ h2{font-size:21px;font-weight:700}
 .tabs{display:flex;gap:6px;margin:16px 0 8px}
 .tab{border:0;background:transparent;padding:7px 12px;border-radius:99px;font-weight:600;font-size:14px;cursor:pointer;color:var(--muted)}
 .tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.gpicker{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.gpicker[hidden]{display:none}
+.gpick{width:34px;height:34px;border-radius:10px;border:0;font-size:17px;display:grid;place-items:center;background:var(--surface2);cursor:pointer;opacity:.55}
+.gpick.on{opacity:1;box-shadow:0 0 0 2px var(--tc,var(--ink)) inset;background:color-mix(in srgb,var(--tc,#888) 20%,var(--surface))}
 .board{display:grid;gap:2px}
 .brow{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;padding:9px 10px;border-radius:10px;font-size:15px}
 .brow.me{background:var(--you-soft);font-weight:600}
@@ -259,8 +263,6 @@ h2{font-size:21px;font-weight:700}
 .rtab td.best{font-weight:800;color:var(--ok)}
 .rtab tr.tot td{font:800 16px var(--font-d);border-top:2px solid var(--line-strong)}
 .rtab th:not(:first-child),.rtab td:not(:first-child){text-align:right}
-.today{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-.today b{font:700 18px var(--font-d)}
 .gem{display:grid;place-items:center;width:44px;height:44px;border-radius:13px;font-size:24px;flex:none;background:color-mix(in srgb,var(--tc,#888) 18%,var(--surface))}
 .tile .gem{width:40px;height:40px;font-size:21px}
 

@@ -209,28 +209,36 @@ function runReveal(cfg) {
 
 /* ---------- home ---------- */
 function home() {
-  App.screen = 'home'; const date = todayStr(); const dp = dailyPick(date); const dg = dp.gid;
-  const recLine = h('div', { class: 'rec' }); const friendBtn = h('button', { class: 'btn rival', onclick: () => lobby() }, 'Race a friend');
-  const dailyBtn = h('button', { class: 'btn you block', onclick: () => startDaily() }, ''); const streakEl = h('span', { class: 'streak' });
+  App.screen = 'home';
+  const recLine = h('div', { class: 'rec' }); const friendBtn = h('button', { class: 'btn rival', onclick: () => ensureName(() => lobby()) }, 'Race a friend');
+  const streakEl = h('span', { class: 'streak' });
   const nameInput = h('input', { class: 'field sm', style: 'flex:1;min-width:0;width:auto', placeholder: 'Your name', maxlength: 18, autocomplete: 'off', value: App.rec.name || '' });
   const nameNote = h('div', { class: 'muted small', style: 'margin-top:6px' });
-  const nameSave = () => { const v = nameInput.value.trim().slice(0, 18); App.rec.name = v; saveRec(); nameNote.textContent = v ? 'Saved \u2014 this is what others see on the board.' : 'No name set \u2014 you\u2019ll show as \u201CPlayer\u201D.'; };
-  const nameField = h('div', { class: 'namefield' }, h('label', { class: 'muted small', for: 'nmIn' }, 'Your name on the leaderboard'), h('div', { style: 'display:flex;gap:8px;margin-top:4px' }, nameInput, h('button', { class: 'btn ghost sm', style: 'flex:none', onclick: nameSave }, 'Save')), nameNote);
+  const nameSave = () => { const v = nameInput.value.trim().slice(0, 18); if (!v) { nameNote.textContent = 'A name is required so others can see who\u2019s on the board.'; return; } App.rec.name = v; saveRec(); nameNote.textContent = 'Saved \u2014 this is what others see on the board.'; };
+  const nameField = h('div', { class: 'namefield' }, h('label', { class: 'muted small', for: 'nmIn' }, 'Your name on the leaderboard (required)'), h('div', { style: 'display:flex;gap:8px;margin-top:4px' }, nameInput, h('button', { class: 'btn ghost sm', style: 'flex:none', onclick: nameSave }, 'Save')), nameNote);
   nameInput.id = 'nmIn'; nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') nameSave(); });
+  const dailyGrid = h('div', { class: 'tiles' });
+  function drawDaily() {
+    const today = App.rec.daily[todayStr()] || {};
+    dailyGrid.replaceChildren(...GAME_IDS.map((id) => { const d = today[id];
+      return h('button', { class: 'tile', onclick: () => ensureName(() => startDaily(id)) },
+        h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em),
+        h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, d ? 'Solved \u00B7 ' + fmt(d.s) : 'Play today\u2019s')),
+        d ? h('span', { class: 'lv', style: 'color:var(--ok)' }, '\u2713') : null); }));
+  }
   function refresh() {
     if (App.screen !== 'home') return; const r = App.rec;
     recLine.textContent = App.room ? 'Your Elo ' + r.elo.r + (r.elo.n ? ' \u00B7 ' + r.elo.n + (r.elo.n === 1 ? ' race' : ' races') : '') : 'Live races need this page opened signed in on claude.ai';
     friendBtn.disabled = !App.room;
-    const d = r.daily[todayStr()]; dailyBtn.textContent = d ? 'Today\u2019s time ' + fmt(d.s) + '. Play again, unranked' : 'Play today\u2019s puzzle'; dailyBtn.className = 'btn block ' + (d ? 'ghost' : 'you');
     const s = streak(); streakEl.textContent = s ? s + ' day streak' : '';
     const shared = App.db && App.uid !== 'local'; nameField.hidden = !shared;
     if (shared && document.activeElement !== nameInput) nameInput.value = r.name || '';
+    drawDaily();
   }
   const hero = h('section', { class: 'hero', 'aria-label': 'Race a friend' },
     h('div', { class: 'lanes', 'aria-hidden': 'true' }, h('div', { class: 'lane-row' }, h('span', null, 'You'), h('div', { class: 'lane you', style: '--to:78%' }, h('i'))), h('div', { class: 'lane-row' }, h('span', null, 'Friend'), h('div', { class: 'lane rival', style: '--to:61%' }, h('i')))),
-    h('h1', null, 'Race a friend on puzzles you pick'), h('div', { class: 'cta-row' }, friendBtn, h('button', { class: 'btn you', onclick: () => startDaily() }, 'Daily puzzle')), recLine);
-  const daily = h('section', { class: 'sec' }, h('h2', null, 'Today\u2019s puzzle'),
-    h('div', { class: 'card' }, h('div', { class: 'today' }, h('span', { class: 'gem', style: '--tc:' + GAMES[dg].tc }, GAMES[dg].em), h('div', null, h('b', null, GAMES[dg].name), h('span', { class: 'muted small', style: 'display:block' }, GAMES[dg].blurb + '. A new puzzle every day.'))), dailyBtn));
+    h('h1', null, 'Race a friend on puzzles you pick'), h('div', { class: 'cta-row' }, friendBtn, h('button', { class: 'btn you', onclick: () => daily.scrollIntoView({ behavior: 'smooth' }) }, 'Today\u2019s puzzles')), recLine);
+  const daily = h('section', { class: 'sec' }, h('h2', null, 'Today\u2019s puzzles'), h('p', { class: 'muted small', style: 'margin:-4px 0 10px' }, 'One daily puzzle for each game \u2014 new ones at midnight, your time.'), dailyGrid);
   const leaderboard = h('section', { class: 'sec' }, h('h2', null, 'Leaderboard'), h('div', { class: 'card' }, nameField, boardView()));
   const tiles = h('div', { class: 'tiles' }, ...GAME_IDS.map((id) => h('button', { class: 'tile', onclick: () => startRandom(id) }, h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em), h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, GAMES[id].blurb)))),
     h('button', { class: 'tile wide', onclick: () => startSurprise() }, h('div', null, h('b', null, 'Surprise me'), h('span', { class: 'd' }, 'A random puzzle from a random game.'))));

@@ -7,10 +7,15 @@ function lsSet(r) { try { localStorage.setItem(LS_KEY, JSON.stringify(r)); } cat
 function stable(o) { if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']'; if (o && typeof o === 'object') return '{' + Object.keys(o).sort().map((k) => JSON.stringify(k) + ':' + stable(o[k])).join(',') + '}'; return JSON.stringify(o); }
 function mergeRec(a, b) {
   const o = defRec();
+  const take = (d, g, e) => { if (!g || !GAMES[g] || !e || typeof e.s !== 'number') return; if (!o.daily[d]) o.daily[d] = {}; if (!o.daily[d][g] || (e.at || 0) < (o.daily[d][g].at || 0)) o.daily[d][g] = { s: e.s, at: e.at || 0 }; };
   [a, b].forEach((x) => {
     if (!x || typeof x !== 'object') return;
     const dd = x.daily || {};
-    Object.keys(dd).forEach((d) => { const e = dd[d]; if (!e || typeof e.s !== 'number') return; if (!o.daily[d] || (e.at || 0) < (o.daily[d].at || 0)) o.daily[d] = e; });
+    Object.keys(dd).forEach((d) => {
+      const entry = dd[d]; if (!entry || typeof entry !== 'object') return;
+      if (typeof entry.s === 'number') take(d, entry.g, entry); // legacy flat shape: { s, at, g }
+      else Object.keys(entry).forEach((g) => take(d, g, entry[g])); // { [gid]: { s, at } }
+    });
     const el = x.elo || {}; if ((el.n | 0) > o.elo.n) o.elo = { r: +el.r || 1200, n: el.n | 0 };
     if (!o.name && typeof x.name === 'string' && x.name) o.name = x.name;
   });
@@ -20,7 +25,8 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const dstr = (d) => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 const todayStr = () => dstr(new Date());
 function addDays(s, n) { const [y, m, d] = s.split('-').map(Number); return dstr(new Date(y, m - 1, d + n)); }
-function streak() { let d = App.rec.daily[todayStr()] ? todayStr() : addDays(todayStr(), -1); let n = 0; while (App.rec.daily[d]) { n++; d = addDays(d, -1); } return n; }
+const hasDaily = (d) => { const day = App.rec.daily[d]; return !!day && Object.keys(day).length > 0; };
+function streak() { let d = hasDaily(todayStr()) ? todayStr() : addDays(todayStr(), -1); let n = 0; while (hasDaily(d)) { n++; d = addDays(d, -1); } return n; }
 const notify = () => App.listeners.slice().forEach((f) => { try { f(); } catch (e) { console.warn(e); } });
 let saveChain = Promise.resolve();
 function saveRec() {
@@ -63,23 +69,29 @@ async function names(ids) {
   try { if (App.user && App.user.profiles && ids.length) { const ps = await App.user.profiles(ids); ids.forEach((i) => { out[i] = (ps[i] && ps[i].name) || ''; }); } } catch (e) { /* ignore */ }
   return out;
 }
-function boardView() {
-  let tab = 'today';
+function boardView(initialGid) {
+  let tab = 'today'; let gid = (initialGid && GAMES[initialGid]) ? initialGid : GAME_IDS[0];
   const defs = [['today', 'Today'], ['yest', 'Yesterday'], ['elo', 'Elo']];
   const tabs = h('div', { class: 'tabs', role: 'tablist' });
+  const picker = h('div', { class: 'gpicker' });
   const body = h('div', { class: 'board', 'aria-live': 'polite' }); const note = h('div', { class: 'note' });
-  defs.forEach(([k, l]) => tabs.append(h('button', { class: 'tab', role: 'tab', 'aria-selected': String(k === tab), onclick: () => { tab = k; [...tabs.children].forEach((b, i) => b.setAttribute('aria-selected', String(defs[i][0] === tab))); draw(); } }, l)));
-  const root = h('div', null, tabs, body, note); let seq = 0;
+  defs.forEach(([k, l]) => tabs.append(h('button', { class: 'tab', role: 'tab', 'aria-selected': String(k === tab), onclick: () => { tab = k; [...tabs.children].forEach((b, i) => b.setAttribute('aria-selected', String(defs[i][0] === tab))); drawPicker(); draw(); } }, l)));
+  function drawPicker() {
+    picker.hidden = tab === 'elo';
+    picker.replaceChildren(...GAME_IDS.map((id) => h('button', { class: 'gpick' + (id === gid ? ' on' : ''), style: '--tc:' + GAMES[id].tc, 'aria-label': GAMES[id].name, 'aria-pressed': String(id === gid), onclick: () => { gid = id; drawPicker(); draw(); } }, GAMES[id].em)));
+  }
+  const root = h('div', null, tabs, picker, body, note); let seq = 0;
   async function draw() {
     const my = ++seq; const date = tab === 'yest' ? addDays(todayStr(), -1) : todayStr(); let rows;
     if (tab === 'elo') rows = [...App.board].map(([id, d]) => ({ id, r: (d.elo && d.elo.r) || 1200, n: (d.elo && d.elo.n) || 0 })).filter((x) => x.n > 0).sort((a, b) => b.r - a.r || b.n - a.n);
-    else rows = [...App.board].map(([id, d]) => ({ id, e: d.daily && d.daily[date] })).filter((x) => x.e).sort((a, b) => a.e.s - b.e.s);
+    else rows = [...App.board].map(([id, d]) => ({ id, e: d.daily && d.daily[date] && d.daily[date][gid] })).filter((x) => x.e).sort((a, b) => a.e.s - b.e.s);
     const shown = rows.slice(0, 8); const mi = rows.findIndex((x) => x.id === App.uid); if (mi >= 8) shown.push(rows[mi]);
     const nm = await names(shown.map((x) => x.id)); if (my !== seq) return;
-    if (!rows.length) body.replaceChildren(h('div', { class: 'empty' }, tab === 'elo' ? 'No ranked races yet. Race a friend to get on the Elo board.' : tab === 'today' ? 'No times yet today. Be the first on the board.' : 'Nobody posted yesterday.'));
+    if (!rows.length) body.replaceChildren(h('div', { class: 'empty' }, tab === 'elo' ? 'No ranked races yet. Race a friend to get on the Elo board.' : tab === 'today' ? 'No times yet today for ' + GAMES[gid].name + '. Be the first on the board.' : 'Nobody posted yesterday for ' + GAMES[gid].name + '.'));
     else body.replaceChildren(...shown.map((x) => { const me = x.id === App.uid; const nmTxt = nm[x.id] || (me ? 'You' : 'Player'); return h('div', { class: 'brow' + (me ? ' me' : '') }, h('span', { class: 'rk' }, rows.indexOf(x) + 1), h('span', { class: 'nm' }, nmTxt + (me && nm[x.id] ? ' (you)' : '')), h('div', { class: 'sc' }, tab === 'elo' ? String(x.r) : fmt(x.e.s), tab === 'elo' ? h('small', null, x.n + (x.n === 1 ? ' race' : ' races')) : null)); }));
     note.textContent = App.db && App.uid !== 'local' ? (tab === 'elo' ? 'Elo rating from live races against friends. Everyone starts at 1200.' : 'Fastest solve wins. New puzzle at midnight, your time.') : 'Times are kept on this device. Open this page signed in to claude.ai to share a live board.';
   }
+  drawPicker();
   const refresh = () => { if (!root.isConnected) { App.listeners = App.listeners.filter((f) => f !== refresh); return; } draw(); };
   App.listeners.push(refresh); draw(); return root;
 }
