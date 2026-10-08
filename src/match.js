@@ -55,8 +55,8 @@ function runRace(cfg) {
       onGo: () => { if (i === 0) S.t0 = performance.now(); },
       onProgress: (p, snap) => { if (p >= 1) return; hud.setMe(i, p, S.times, false, S.gave); const now = performance.now(); if (now - S.lastEmit > 500) { S.lastEmit = now; emit({ t: 'prog', i, p, times: S.times, gave: S.gave, snap }); } },
       onSolveNow: (res) => { finish(i, res.time, res.at, false); if (i < nP - 1) setTimeout(() => { try { puzzleFor(games[i + 1], pseed(i + 1)); } catch (e) { /* on demand */ } }, 300); },
-      onSolved: () => { if (i < nP - 1 && !S.over) ctl.prompt('Solved in ' + fmt(S.times[i]), 'Next: ' + GAMES[games[i + 1]].name, 'Next puzzle \u2192', () => startPuzzle(i + 1)); },
-      onGiveUp: (res) => { finish(i, res.time, performance.now(), true); if (i < nP - 1 && !S.over) ctl.prompt('Answer shown (+60s)', 'Next: ' + GAMES[games[i + 1]].name, 'Next puzzle \u2192', () => startPuzzle(i + 1)); },
+      onSolved: () => { if (i < nP - 1 && !S.over) { toast('Solved in ' + fmt(S.times[i]) + ' \u2014 next: ' + GAMES[games[i + 1]].name); startPuzzle(i + 1); } },
+      onGiveUp: (res) => { finish(i, res.time, performance.now(), true); if (i < nP - 1 && !S.over) { toast('Answer shown (+60s) \u2014 next: ' + GAMES[games[i + 1]].name); startPuzzle(i + 1); } },
       onQuit: () => confirmQuit(() => { emit({ t: 'quit' }); end(false, 'You left the race.', true); }) });
   }
   function finish(i, time, at, gaveUp) {

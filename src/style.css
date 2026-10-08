@@ -452,6 +452,11 @@ body{overflow-x:hidden}
 .giveup{opacity:.85}
 .reveal-tag{position:absolute;left:50%;top:-14px;transform:translateX(-50%);z-index:9;background:#18A864;color:#fff;font:800 13px var(--font-d);padding:6px 14px;border-radius:99px;box-shadow:0 4px 14px rgba(0,0,0,.25);animation:badge .4s cubic-bezier(.2,1.5,.4,1) both}
 .stage.revealed{box-shadow:0 0 0 3px #18A864}
+.reveal-compare{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.reveal-col{display:flex;flex-direction:column;gap:6px;min-width:0}
+.reveal-col small{font:700 11px var(--font-b);color:var(--muted);text-align:center}
+.reveal-col .stage{padding:8px;min-height:180px}
+.reveal-continue{margin-top:14px}
 .chip.pen{background:var(--you-soft);color:var(--you)}
 .tm.gu{background:var(--you-soft);color:var(--you)}
 .elo-chip{display:flex;align-items:baseline;justify-content:center;gap:10px;margin:6px 0 4px}

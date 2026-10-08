@@ -77,10 +77,27 @@ function playScreen(o) {
     if (!running || done) return;
     dialog('Show the answer? ' + (o.giveUpNote || 'This puzzle will not count.'), 'Show answer', 'Keep trying').then((ok) => {
       if (!ok || !running || done) return; done = true; const t = elapsed(); running = false; timers.forEach(clearInterval);
+      const mySnap = game && game.snapshot ? game.snapshot() : null;
       try { game && game.reveal && game.reveal(); } catch (e) { /* ignore */ }
-      stage.classList.add('revealed'); sw.append(h('div', { class: 'reveal-tag' }, 'Here\u2019s the answer'));
+      stage.classList.add('revealed');
+      let triedCtl = null;
+      if (mySnap != null) {
+        try {
+          const triedRoot = h('div', { class: 'stage th-' + o.gameId });
+          const sctx = { r: LD.makeRng('tried|' + seed), level: levelFor(o.gameId, seed), puzzle: () => puzzleFor(o.gameId, seed), active: () => false, progress() {}, penalty() {}, solve() {} };
+          triedCtl = G.mount(triedRoot, sctx);
+          if (triedCtl.applySnapshot) {
+            triedCtl.applySnapshot(mySnap);
+            sw.append(h('div', { class: 'reveal-compare' }, h('div', { class: 'reveal-col' }, h('small', null, 'What you tried'), triedRoot), h('div', { class: 'reveal-col' }, h('small', null, 'The answer'), stage)));
+          } else { if (triedCtl.destroy) triedCtl.destroy(); triedCtl = null; sw.append(stage); }
+        } catch (e) { triedCtl = null; if (!stage.isConnected) sw.append(stage); }
+      }
+      sw.append(h('div', { class: 'reveal-tag' }, 'Here\u2019s the answer'));
       const res = { time: Math.round(t * 10) / 10, gameId: o.gameId, at: performance.now(), gaveUp: true };
-      timers.push(setTimeout(() => { if (o.onGiveUp) o.onGiveUp(res); }, 2800));
+      let advanced = false; let nextT = null;
+      const advance = () => { if (advanced) return; advanced = true; clearTimeout(nextT); if (triedCtl && triedCtl.destroy) triedCtl.destroy(); if (o.onGiveUp) o.onGiveUp(res); };
+      if (o.onGiveUp) sw.append(h('button', { class: 'btn you block reveal-continue', onclick: advance }, 'Continue \u2192'));
+      nextT = setTimeout(advance, 6000); timers.push(nextT);
     });
   }
   const begin = () => { game = G.mount(stage, ctx); t0 = performance.now(); running = true; if (o.onGo) o.onGo(); };
@@ -96,7 +113,6 @@ function playScreen(o) {
     destroy() { timers.forEach((t) => { clearInterval(t); clearTimeout(t); }); running = false; done = true; if (game && game.destroy) game.destroy(); },
     freeze() { running = false; },
     banner(title, sub, cls) { overlay(h('div', null, h('div', { class: 'msg ' + (cls || '') }, title), sub ? h('div', { class: 'sm' }, sub) : null)); },
-    prompt(title, sub, label, fn) { const b = h('button', { class: 'btn you', onclick: () => { ov.remove(); fn(); } }, label); const ov = overlay(h('div', null, h('div', { class: 'msg win' }, title), sub ? h('div', { class: 'sm' }, sub) : null, h('div', { style: 'margin-top:16px' }, b))); },
     cheat() { game && game.cheat && game.cheat(); },
     giveUpNow() { giveUp(); },
   };
