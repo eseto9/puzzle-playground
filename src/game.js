@@ -137,7 +137,7 @@ function mountJungle(root, ctx) {
     });
     trayEls.forEach((b, a) => { b.classList.toggle('used', placed[a] >= 0); b.classList.toggle('sel', sel === a); b.setAttribute('aria-pressed', String(sel === a)); });
     let sat = 0;
-    clues.forEach((c, k) => { const s = LD.clueState(P, c, (a) => placed[a]); clueEls[k].classList.toggle('bad', s === false); if (s === true) sat++; });
+    clues.forEach((c, k) => { const s = LD.clueState(P, c, (a) => placed[a]); clueEls[k].classList.toggle('bad', s === false); clueEls[k].classList.toggle('ok', s === true); if (s === true) sat++; });
     const np = placed.filter((x) => x >= 0).length;
     ctx.progress(0.5 * np / N + 0.5 * sat / clues.length);
     if (np === N && LD.allHold(P, clues, placed)) ctx.solve();

@@ -74,7 +74,7 @@ function mountAlibi(root, ctx) {
   root.append(board, h('div', { class: 'clues c3' }, clueEls));
   function draw() {
     st.forEach((s, a) => { const b = bars[a]; b.classList.toggle('on', s >= 0); if (s >= 0) b.style.setProperty('--s', s); });
-    let sat = 0; clues.forEach((c, k) => { const v = LD2.alState(P, c, st); clueEls[k].classList.toggle('bad', v === false); if (v === true) sat++; });
+    let sat = 0; clues.forEach((c, k) => { const v = LD2.alState(P, c, st); clueEls[k].classList.toggle('bad', v === false); clueEls[k].classList.toggle('ok', v === true); if (v === true) sat++; });
     const np = st.filter((x) => x >= 0).length; ctx.progress(0.5 * np / nS + 0.5 * sat / clues.length);
     if (np === nS && LD2.alCheck(P, st)) ctx.solve();
   }

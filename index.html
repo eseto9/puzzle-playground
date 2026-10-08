@@ -183,6 +183,7 @@ h2{font-size:21px;font-weight:700}
 .clues{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
 .clue{--tk:clamp(24px,7.2vw,34px);position:relative;display:flex;align-items:center;justify-content:center;min-height:clamp(58px,17vw,84px);padding:5px;border-radius:12px;background:var(--surface2)}
 .clue.bad{background:var(--you-soft);box-shadow:inset 0 0 0 2px var(--bad)}
+.clue.ok{background:color-mix(in srgb,var(--ok) 16%,var(--surface2));box-shadow:inset 0 0 0 2px var(--ok)}
 .clue .tok{width:var(--tk);height:var(--tk);font-size:calc(var(--tk)*.6);flex:none;box-shadow:inset 0 0 0 2.5px var(--c)}
 .mmw{display:block;line-height:0;max-width:56%}
 .clue .mm{height:clamp(46px,14vw,70px);width:auto;max-width:100%;display:block}
@@ -215,6 +216,7 @@ h2{font-size:21px;font-weight:700}
 .clue .cin{display:flex;align-items:center;justify-content:center;flex:1;width:100%}
 .cap{font:700 9.5px/1.1 var(--font-b);color:var(--muted);text-align:center;letter-spacing:0}
 .clue.bad .cap{color:var(--bad)}
+.clue.ok .cap{color:var(--ok)}
 .nb{position:relative;z-index:3;margin-left:calc(var(--tk)*-.45);align-self:flex-end;width:calc(var(--tk)*.8);height:calc(var(--tk)*.8);border-radius:50%;background:#fff;color:#222;font:800 14px var(--font-d);display:grid;place-items:center;box-shadow:0 0 0 2px #4a4a55}
 .cl-pair{display:flex;align-items:center;gap:3px}
 .cl-pair.v{flex-direction:column;gap:1px}
@@ -1439,7 +1441,7 @@ function mountJungle(root, ctx) {
     });
     trayEls.forEach((b, a) => { b.classList.toggle('used', placed[a] >= 0); b.classList.toggle('sel', sel === a); b.setAttribute('aria-pressed', String(sel === a)); });
     let sat = 0;
-    clues.forEach((c, k) => { const s = LD.clueState(P, c, (a) => placed[a]); clueEls[k].classList.toggle('bad', s === false); if (s === true) sat++; });
+    clues.forEach((c, k) => { const s = LD.clueState(P, c, (a) => placed[a]); clueEls[k].classList.toggle('bad', s === false); clueEls[k].classList.toggle('ok', s === true); if (s === true) sat++; });
     const np = placed.filter((x) => x >= 0).length;
     ctx.progress(0.5 * np / N + 0.5 * sat / clues.length);
     if (np === N && LD.allHold(P, clues, placed)) ctx.solve();
@@ -1576,7 +1578,7 @@ function mountAlibi(root, ctx) {
   root.append(board, h('div', { class: 'clues c3' }, clueEls));
   function draw() {
     st.forEach((s, a) => { const b = bars[a]; b.classList.toggle('on', s >= 0); if (s >= 0) b.style.setProperty('--s', s); });
-    let sat = 0; clues.forEach((c, k) => { const v = LD2.alState(P, c, st); clueEls[k].classList.toggle('bad', v === false); if (v === true) sat++; });
+    let sat = 0; clues.forEach((c, k) => { const v = LD2.alState(P, c, st); clueEls[k].classList.toggle('bad', v === false); clueEls[k].classList.toggle('ok', v === true); if (v === true) sat++; });
     const np = st.filter((x) => x >= 0).length; ctx.progress(0.5 * np / nS + 0.5 * sat / clues.length);
     if (np === nS && LD2.alCheck(P, st)) ctx.solve();
   }
