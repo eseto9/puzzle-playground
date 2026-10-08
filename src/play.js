@@ -130,6 +130,11 @@ function playScreen(o) {
 }
 const homeBtn = () => h('button', { class: 'btn ghost block', onclick: () => home() }, 'Back to home');
 const dailySeed = (date, gid) => 'daily-' + date + '-' + gid;
+function nextDailyGid(gid) {
+  const today = App.rec.daily[todayStr()] || {}; const idx = GAME_IDS.indexOf(gid);
+  for (let k = 1; k <= GAME_IDS.length; k++) { const cand = GAME_IDS[(idx + k) % GAME_IDS.length]; if (!today[cand]) return cand; }
+  return GAME_IDS[(idx + 1) % GAME_IDS.length];
+}
 function startDaily(gid) {
   const date = todayStr(); const seed = dailySeed(date, gid); App.screen = 'play';
   playScreen({ gameId: gid, seed, title: 'Today\u2019s puzzle', sub: GAMES[gid].name + ' \u00B7 ' + date, onQuit: () => home(),
@@ -140,11 +145,12 @@ function startDaily(gid) {
       const mine = App.rec.daily[date][gid];
       const rows = [...App.board].map(([, d]) => d.daily && d.daily[date] && d.daily[date][gid]).filter(Boolean).sort((a, b) => a.s - b.s);
       const rank = rows.findIndex((e) => e.s === mine.s && e.at === mine.at) + 1;
+      const next = nextDailyGid(gid);
       view(h('div', { class: 'wrap' },
         h('div', { class: 'card result' }, h('div', { class: 'muted' }, GAMES[gid].name + (ranked ? ' solved' : ' solved again')), h('div', { class: 'big' }, fmt(res.time)),
           h('div', { class: 'pillrow' }, ranked && rank ? h('span', { class: 'chip' }, 'Rank ' + rank + ' of ' + rows.length) : h('span', { class: 'chip' }, 'Today\u2019s time ' + fmt(mine.s))),
           h('p', { class: 'muted small' }, ranked ? 'Your time is on today\u2019s board.' : 'You already posted today, so this run is unranked.'),
-          h('div', { class: 'stack' }, h('button', { class: 'btn you block', onclick: () => startRandom(LD.pick(Math.random, GAME_IDS)) }, 'Keep playing'), h('button', { class: 'btn ghost block', onclick: () => home() }, 'Back to home'))),
+          h('div', { class: 'stack' }, h('button', { class: 'btn you block', onclick: () => startDaily(next) }, 'Keep playing \u00b7 ' + GAMES[next].name), h('button', { class: 'btn ghost block', onclick: () => home() }, 'Back to home'))),
         h('div', { class: 'sec' }, h('h2', null, GAMES[gid].name + '\u2019s board'), h('div', { class: 'card' }, boardView(gid))))); } });
 }
 function startRandom(gid, seed) {
