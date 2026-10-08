@@ -94,10 +94,9 @@ function playScreen(o) {
       }
       sw.append(h('div', { class: 'reveal-tag' }, 'Here\u2019s the answer'));
       const res = { time: Math.round(t * 10) / 10, gameId: o.gameId, at: performance.now(), gaveUp: true };
-      let advanced = false; let nextT = null;
-      const advance = () => { if (advanced) return; advanced = true; clearTimeout(nextT); if (triedCtl && triedCtl.destroy) triedCtl.destroy(); if (o.onGiveUp) o.onGiveUp(res); };
-      if (o.onGiveUp) sw.append(h('button', { class: 'btn you block reveal-continue', onclick: advance }, 'Continue \u2192'));
-      nextT = setTimeout(advance, 6000); timers.push(nextT);
+      let advanced = false;
+      const advance = () => { if (advanced) return; advanced = true; if (triedCtl && triedCtl.destroy) triedCtl.destroy(); if (o.onGiveUp) o.onGiveUp(res); };
+      sw.append(h('button', { class: 'btn you block reveal-continue', onclick: advance }, 'Continue \u2192'));
     });
   }
   const begin = () => {

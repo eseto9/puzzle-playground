@@ -221,7 +221,7 @@ h2{font-size:21px;font-weight:700}
 .cl-alone .ctr .tok{width:100%;height:100%;font-size:calc(var(--tk)*.5)}
 
 /* ===== alibi ===== */
-.al{display:grid;gap:5px;margin-bottom:12px}
+.al{display:grid;gap:9px;margin-bottom:12px}
 .al-head,.al-row{display:grid;grid-template-columns:58px 1fr;gap:6px;align-items:center}
 .al-pm{font:700 11px var(--font-b);color:var(--muted);text-align:center}
 .al-hours{display:grid;grid-template-columns:repeat(var(--T),1fr)}
@@ -229,7 +229,7 @@ h2{font-size:21px;font-weight:700}
 .al-who{display:flex;flex-direction:column;align-items:center;gap:1px}
 .al-who .tok{width:42px;height:42px;font-size:24px;flex:none}
 .al-who small{font:700 11px var(--font-b);color:var(--muted)}
-.al-track{position:relative;display:grid;grid-template-columns:repeat(var(--T),1fr);height:38px;border-radius:10px;background:var(--surface2);overflow:hidden;touch-action:none;cursor:grab}
+.al-track{position:relative;display:grid;grid-template-columns:repeat(var(--T),1fr);height:56px;border-radius:12px;background:var(--surface2);overflow:hidden;touch-action:none;cursor:grab}
 .al-track:active{cursor:grabbing}
 .al-cell{border:0;background:transparent;box-shadow:inset -1px 0 0 var(--line);cursor:pointer;padding:0}
 .al-cell:last-of-type{box-shadow:none}

@@ -55,15 +55,15 @@ function mountAlibi(root, ctx) {
     const bar = h('div', { class: 'al-bar', style: '--c:' + ALC[a].c + ';--d:' + dur[a] }, h('span', null, dur[a] + 'h'));
     const track = h('div', { class: 'al-track' }, ...LD.range(T).map((t) => h('button', { class: 'al-cell', 'aria-label': ALC[a].n + ' arrives at ' + hourLabel(t), onclick: () => { if (pointerHandled) return; place(a, t); } })), bar);
     board.append(h('div', { class: 'al-row' }, h('div', { class: 'al-who' }, tk(a), h('small', null, dur[a] + 'h')), track)); bars.push(bar); tracks.push(track);
-    let dragging = false, moved = false;
-    track.addEventListener('pointerdown', (ev) => { if (!ctx.active()) return; dragging = true; moved = false; try { track.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ } });
-    track.addEventListener('pointermove', (ev) => { if (!dragging || !ctx.active()) return; moved = true; dragSet(a, ev.clientX, track); });
-    const up = () => { if (dragging && moved) { pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0); } dragging = false; };
-    track.addEventListener('pointerup', up); track.addEventListener('pointercancel', up);
-  }
-  function dragSet(a, clientX, track) {
-    const r = track.getBoundingClientRect(); const frac = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
-    const t = Math.round(frac * (T - 1)); st[a] = Math.min(t, T - dur[a]); draw();
+    let dragging = false, moved = false, startS = -2;
+    const posAt = (clientX) => { const r = track.getBoundingClientRect(); const frac = Math.max(0, Math.min(1, (clientX - r.left) / r.width)); const t = Math.round(frac * (T - 1)); return Math.min(t, T - dur[a]); };
+    track.addEventListener('pointerdown', (ev) => { if (!ctx.active()) return; dragging = true; moved = false; startS = st[a]; try { track.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ } });
+    track.addEventListener('pointermove', (ev) => { if (!dragging || !ctx.active()) return; moved = true; st[a] = posAt(ev.clientX); draw(); });
+    const up = (ev) => {
+      if (dragging) { if (moved) { /* already live-updated */ } else { const s = posAt(ev.clientX); st[a] = startS === s ? -1 : s; draw(); } pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0); }
+      dragging = false;
+    };
+    track.addEventListener('pointerup', up); track.addEventListener('pointercancel', () => { dragging = false; });
   }
   const clueEls = clues.map((c) => {
     const two = c.b != null; const txt = alText(P, c);
