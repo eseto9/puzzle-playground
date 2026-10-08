@@ -30,21 +30,41 @@ function mountPaint(root, ctx) {
   }
   function move(id) { if (!ctx.active()) return; order = order.filter((x) => x !== id); if (mode === 'front') order.push(id); else order.unshift(id); draw(id); }
   function startDrag(ev, el) {
-    if (!ctx.active()) return; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    if (!ctx.active()) return;
+    const kids = [...chips.children]; const origIndex = kids.indexOf(el); const n = kids.length;
+    const rect0 = el.getBoundingClientRect(); const nextEl = kids[origIndex + 1], prevEl = kids[origIndex - 1];
+    const rowStep = nextEl ? nextEl.getBoundingClientRect().top - rect0.top : prevEl ? rect0.top - prevEl.getBoundingClientRect().top : rect0.height + 8;
+    try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
     el.classList.add('dragging');
-    const onMove = (e) => {
-      if (!el.dataset.dragged) { el.dataset.dragged = '1'; }
-      const under = document.elementFromPoint(e.clientX, e.clientY); const target = under && under.closest && under.closest('.pt-chip');
-      if (target && target !== el && target.parentNode === chips) {
-        const kids = [...chips.children]; const from = kids.indexOf(el), to = kids.indexOf(target);
-        if (from < 0 || to < 0) return;
-        if (from < to) chips.insertBefore(el, target.nextSibling); else chips.insertBefore(el, target);
+    const startY = ev.clientY; let curIndex = origIndex; let raf = 0, dy = 0;
+    const shift = (i, dir) => { kids[i].style.transform = dir ? 'translateY(' + (dir * rowStep) + 'px)' : ''; };
+    const update = () => {
+      raf = 0; el.style.transform = 'translateY(' + dy + 'px) scale(1.03)';
+      const raw = Math.max(0, Math.min(n - 1, origIndex + Math.round(dy / rowStep)));
+      if (raw !== curIndex) {
+        for (let i = 0; i < n; i++) {
+          if (i === origIndex) continue;
+          let dir = 0;
+          if (raw > origIndex && i > origIndex && i <= raw) dir = -1;
+          else if (raw < origIndex && i < origIndex && i >= raw) dir = 1;
+          shift(i, dir);
+        }
+        curIndex = raw;
       }
     };
+    const onMove = (e) => {
+      if (!ctx.active()) return; dy = e.clientY - startY;
+      if (Math.abs(dy) > 4) el.dataset.dragged = '1';
+      if (!raf) raf = requestAnimationFrame(update);
+    };
     const onUp = () => {
+      if (raf) cancelAnimationFrame(raf);
       el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointercancel', onUp);
-      el.classList.remove('dragging');
-      if (el.dataset.dragged) { order = [...chips.children].map((c) => +c.dataset.id).reverse(); draw(); }
+      el.classList.remove('dragging'); el.style.transform = ''; kids.forEach((k) => { if (k !== el) k.style.transform = ''; });
+      if (curIndex !== origIndex) {
+        const others = kids.filter((k) => k !== el); chips.insertBefore(el, others[curIndex] || null);
+        order = [...chips.children].map((c) => +c.dataset.id).reverse(); draw();
+      }
     };
     el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('pointercancel', onUp);
   }
