@@ -207,6 +207,23 @@ function runReveal(cfg) {
   T(() => { gone = true; runRace({ host, seed, room, oppName, set: final }); }, at + 1300);
 }
 
+/* ---------- daily puzzle detail: stats + leaderboard for one game, then an explicit Play ---------- */
+function dailyDetail(gid) {
+  App.screen = 'dailyDetail';
+  const date = todayStr(); const today = App.rec.daily[date] || {}; const done = today[gid];
+  const a = avgStats().find((x) => x.id === gid);
+  const avgLine = h('p', { class: 'muted small' }, a ? 'Your average: ' + fmt(a.avg) + ' over ' + a.n + (a.n === 1 ? ' time' : ' times') : 'You haven’t played this one yet.');
+  const playBtn = h('button', { class: 'btn you block', onclick: () => ensureName(() => startDaily(gid)) }, done ? 'Play again, unranked' : 'Play');
+  view(h('div', { class: 'wrap' },
+    h('div', { class: 'topbar' }, h('button', { class: 'icon-btn', 'aria-label': 'Back', onclick: () => home() }, '←'), h('div', { class: 'ttl' }, GAMES[gid].name)),
+    h('div', { class: 'card', style: 'text-align:center' },
+      h('span', { class: 'gem', style: '--tc:' + GAMES[gid].tc + ';margin:0 auto 10px;width:56px;height:56px;font-size:30px' }, GAMES[gid].em),
+      h('p', { class: 'muted small' }, GAMES[gid].blurb),
+      done ? h('div', { class: 'pillrow' }, h('span', { class: 'chip' }, 'Today’s time ' + fmt(done.s))) : null,
+      avgLine, playBtn),
+    h('div', { class: 'sec' }, h('h2', null, 'Leaderboard'), h('div', { class: 'card' }, boardView(gid)))));
+}
+
 /* ---------- home ---------- */
 function home() {
   App.screen = 'home';
@@ -222,7 +239,7 @@ function home() {
     const today = App.rec.daily[todayStr()] || {}; const avgs = {}; avgStats().forEach((x) => { avgs[x.id] = x; });
     dailyGrid.replaceChildren(...GAME_IDS.map((id) => { const d = today[id]; const a = avgs[id];
       const sub = d ? 'Solved \u00B7 ' + fmt(d.s) : a ? 'Play today\u2019s \u00B7 avg ' + fmt(a.avg) : 'Play today\u2019s';
-      return h('button', { class: 'tile', onclick: () => ensureName(() => startDaily(id)) },
+      return h('button', { class: 'tile', onclick: () => dailyDetail(id) },
         h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em),
         h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, sub)),
         d ? h('span', { class: 'lv', style: 'color:var(--ok)' }, '\u2713') : null); }));
