@@ -102,6 +102,23 @@ function boardView(initialGid) {
   App.listeners.push(refresh); draw(); return root;
 }
 
+/* ---------- personal average times, from this device's own daily history ---------- */
+function avgStats() {
+  const out = {}; GAME_IDS.forEach((id) => { out[id] = { n: 0, sum: 0 }; });
+  Object.values(App.rec.daily).forEach((day) => { GAME_IDS.forEach((id) => { const e = day[id]; if (e) { out[id].n++; out[id].sum += e.s; } }); });
+  return GAME_IDS.map((id) => ({ id, n: out[id].n, avg: out[id].n ? out[id].sum / out[id].n : null })).filter((x) => x.n > 0);
+}
+function statsView() {
+  const body = h('div', { class: 'board' }); const root = h('div', null, body);
+  function draw() {
+    const rows = avgStats();
+    if (!rows.length) { body.replaceChildren(h('div', { class: 'empty' }, 'Play a daily puzzle to start tracking your average times.')); return; }
+    body.replaceChildren(...rows.map((x) => h('div', { class: 'brow' }, h('span', { class: 'rk', style: 'font-size:18px' }, GAMES[x.id].em), h('span', { class: 'nm' }, GAMES[x.id].name), h('div', { class: 'sc' }, fmt(x.avg), h('small', null, x.n + (x.n === 1 ? ' time' : ' times'))))));
+  }
+  const refresh = () => { if (!root.isConnected) { App.listeners = App.listeners.filter((f) => f !== refresh); return; } draw(); };
+  App.listeners.push(refresh); draw(); return root;
+}
+
 /* ---------- Elo ---------- */
 function eloApply(oppRating, score) {
   const e = App.rec.elo; const exp = 1 / (1 + Math.pow(10, (oppRating - e.r) / 400)); const nr = Math.round(e.r + 32 * (score - exp));

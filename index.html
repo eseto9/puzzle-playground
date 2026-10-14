@@ -2343,6 +2343,23 @@ function boardView(initialGid) {
   App.listeners.push(refresh); draw(); return root;
 }
 
+/* ---------- personal average times, from this device's own daily history ---------- */
+function avgStats() {
+  const out = {}; GAME_IDS.forEach((id) => { out[id] = { n: 0, sum: 0 }; });
+  Object.values(App.rec.daily).forEach((day) => { GAME_IDS.forEach((id) => { const e = day[id]; if (e) { out[id].n++; out[id].sum += e.s; } }); });
+  return GAME_IDS.map((id) => ({ id, n: out[id].n, avg: out[id].n ? out[id].sum / out[id].n : null })).filter((x) => x.n > 0);
+}
+function statsView() {
+  const body = h('div', { class: 'board' }); const root = h('div', null, body);
+  function draw() {
+    const rows = avgStats();
+    if (!rows.length) { body.replaceChildren(h('div', { class: 'empty' }, 'Play a daily puzzle to start tracking your average times.')); return; }
+    body.replaceChildren(...rows.map((x) => h('div', { class: 'brow' }, h('span', { class: 'rk', style: 'font-size:18px' }, GAMES[x.id].em), h('span', { class: 'nm' }, GAMES[x.id].name), h('div', { class: 'sc' }, fmt(x.avg), h('small', null, x.n + (x.n === 1 ? ' time' : ' times'))))));
+  }
+  const refresh = () => { if (!root.isConnected) { App.listeners = App.listeners.filter((f) => f !== refresh); return; } draw(); };
+  App.listeners.push(refresh); draw(); return root;
+}
+
 /* ---------- Elo ---------- */
 function eloApply(oppRating, score) {
   const e = App.rec.elo; const exp = 1 / (1 + Math.pow(10, (oppRating - e.r) / 400)); const nr = Math.round(e.r + 32 * (score - exp));
@@ -2757,9 +2774,10 @@ function home() {
     h('h1', null, 'Race a friend on puzzles you pick'), h('div', { class: 'cta-row' }, friendBtn, h('button', { class: 'btn you', onclick: () => daily.scrollIntoView({ behavior: 'smooth' }) }, 'Today\u2019s puzzles')), recLine);
   const daily = h('section', { class: 'sec' }, h('h2', null, 'Today\u2019s puzzles'), h('p', { class: 'muted small', style: 'margin:-4px 0 10px' }, 'One daily puzzle for each game \u2014 new ones at midnight, your time.'), dailyGrid);
   const leaderboard = h('section', { class: 'sec' }, h('h2', null, 'Leaderboard'), h('div', { class: 'card' }, nameField, boardView()));
+  const stats = h('section', { class: 'sec' }, h('h2', null, 'Your average times'), h('p', { class: 'muted small', style: 'margin:-4px 0 10px' }, 'Across your last 21 days of daily puzzles.'), h('div', { class: 'card' }, statsView()));
   const tiles = h('div', { class: 'tiles' }, ...GAME_IDS.map((id) => h('button', { class: 'tile', onclick: () => startRandom(id) }, h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em), h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, GAMES[id].blurb)))),
     h('button', { class: 'tile wide', onclick: () => startSurprise() }, h('div', null, h('b', null, 'Surprise me'), h('span', { class: 'd' }, 'A random puzzle from a random game.'))));
-  view(h('div', { class: 'wrap' }, h('div', { class: 'brand' }, h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i')), h('b', null, 'Puzzle Playground'), streakEl), hero, daily, leaderboard, h('section', { class: 'sec' }, h('h2', null, 'Keep playing'), tiles)));
+  view(h('div', { class: 'wrap' }, h('div', { class: 'brand' }, h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i')), h('b', null, 'Puzzle Playground'), streakEl), hero, daily, leaderboard, stats, h('section', { class: 'sec' }, h('h2', null, 'Keep playing'), tiles)));
   refresh();
   const f = () => { if (App.screen !== 'home') { App.listeners = App.listeners.filter((x) => x !== f); return; } refresh(); }; App.listeners.push(f);
 }
