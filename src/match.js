@@ -219,11 +219,12 @@ function home() {
   nameInput.id = 'nmIn'; nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') nameSave(); });
   const dailyGrid = h('div', { class: 'tiles' });
   function drawDaily() {
-    const today = App.rec.daily[todayStr()] || {};
-    dailyGrid.replaceChildren(...GAME_IDS.map((id) => { const d = today[id];
+    const today = App.rec.daily[todayStr()] || {}; const avgs = {}; avgStats().forEach((x) => { avgs[x.id] = x; });
+    dailyGrid.replaceChildren(...GAME_IDS.map((id) => { const d = today[id]; const a = avgs[id];
+      const sub = d ? 'Solved \u00B7 ' + fmt(d.s) : a ? 'Play today\u2019s \u00B7 avg ' + fmt(a.avg) : 'Play today\u2019s';
       return h('button', { class: 'tile', onclick: () => ensureName(() => startDaily(id)) },
         h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em),
-        h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, d ? 'Solved \u00B7 ' + fmt(d.s) : 'Play today\u2019s')),
+        h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, sub)),
         d ? h('span', { class: 'lv', style: 'color:var(--ok)' }, '\u2713') : null); }));
   }
   function refresh() {
@@ -240,10 +241,9 @@ function home() {
     h('h1', null, 'Race a friend on puzzles you pick'), h('div', { class: 'cta-row' }, friendBtn, h('button', { class: 'btn you', onclick: () => daily.scrollIntoView({ behavior: 'smooth' }) }, 'Today\u2019s puzzles')), recLine);
   const daily = h('section', { class: 'sec' }, h('h2', null, 'Today\u2019s puzzles'), h('p', { class: 'muted small', style: 'margin:-4px 0 10px' }, 'One daily puzzle for each game \u2014 new ones at midnight, your time.'), dailyGrid);
   const leaderboard = h('section', { class: 'sec' }, h('h2', null, 'Leaderboard'), h('div', { class: 'card' }, nameField, boardView()));
-  const stats = h('section', { class: 'sec' }, h('h2', null, 'Your average times'), h('p', { class: 'muted small', style: 'margin:-4px 0 10px' }, 'Across your last 21 days of daily puzzles.'), h('div', { class: 'card' }, statsView()));
   const tiles = h('div', { class: 'tiles' }, ...GAME_IDS.map((id) => h('button', { class: 'tile', onclick: () => startRandom(id) }, h('span', { class: 'gem', style: '--tc:' + GAMES[id].tc }, GAMES[id].em), h('div', null, h('b', null, GAMES[id].name), h('span', { class: 'd' }, GAMES[id].blurb)))),
     h('button', { class: 'tile wide', onclick: () => startSurprise() }, h('div', null, h('b', null, 'Surprise me'), h('span', { class: 'd' }, 'A random puzzle from a random game.'))));
-  view(h('div', { class: 'wrap' }, h('div', { class: 'brand' }, h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i')), h('b', null, 'Puzzle Playground'), streakEl), hero, daily, leaderboard, stats, h('section', { class: 'sec' }, h('h2', null, 'Keep playing'), tiles)));
+  view(h('div', { class: 'wrap' }, h('div', { class: 'brand' }, h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i')), h('b', null, 'Puzzle Playground'), streakEl), hero, daily, leaderboard, h('section', { class: 'sec' }, h('h2', null, 'Keep playing'), tiles)));
   refresh();
   const f = () => { if (App.screen !== 'home') { App.listeners = App.listeners.filter((x) => x !== f); return; } refresh(); }; App.listeners.push(f);
 }
