@@ -145,7 +145,7 @@ function genPaint(r, level) {
     shapes.forEach((s) => { s.mem = PSAMP.map(([x, y]) => inShape(s, x, y)); });
     const target = shuffle(r, range(n)); const timg = paintImage(shapes, target);
     const vis = range(n).map((i) => timg.reduce((a, v) => a + (v === i ? 1 : 0), 0));
-    if (vis.some((v) => v < 22)) continue;
+    if (vis.some((v) => v < 26)) continue;
     const start = shuffle(r, range(n)); const simg = paintImage(shapes, start);
     let diff = 0; for (let p = 0; p < timg.length; p++) if (timg[p] !== simg[p]) diff++;
     if (diff < PSAMP.length * 0.16) continue;

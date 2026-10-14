@@ -41,7 +41,7 @@ function lnMini(hi) {
   let s = '<svg viewBox="0 0 50 40" aria-hidden="true">'; for (let y = 0; y < 4; y++) for (let x = 0; x < 5; x++) { const on = hi.col != null ? x === hi.col : y === hi.row; s += `<rect x="${x * 10 + 1}" y="${y * 10 + 1}" width="8" height="8" rx="2" fill="${on ? '#FFD23F' : '#B7B3D3'}" opacity="${on ? 1 : 0.55}"/>`; } return s + '</svg>';
 }
 function lnClueCard(c) {
-  const ic = (a) => h('span', { class: 'lnic', html: atomIcon(a) }); const yes = () => h('i', { class: 'yes' }, '\u2713'); const no = () => h('i', { class: 'no' }, '\u2715'); let inner, cap;
+  const ic = (a) => h('span', { class: 'lnic' + (a.attr === 'hair' ? ' lnic-hair' : ''), style: a.attr === 'hair' ? '--hc:' + HAIRC[a.v] : null, html: atomIcon(a) }); const yes = () => h('i', { class: 'yes' }, '\u2713'); const no = () => h('i', { class: 'no' }, '\u2715'); let inner, cap;
   switch (c.k) {
     case 'has': inner = [ic(c), yes()]; cap = 'Culprit: ' + atomTxt(c); break;
     case 'not': inner = [ic(c), no()]; cap = 'Culprit: no ' + bareTxt(c); break;
@@ -65,7 +65,12 @@ function mountLineup(root, ctx) {
   const P = ctx.puzzle(); const N = P.faces.length; const out = new Set(); let won = false; let mode = 'rule';
   const clues = h('div', { class: 'clues lnclues' }, P.clues.map(lnClueCard));
   const grid = h('div', { class: 'lng' });
-  const tiles = P.faces.map((f, i) => { const b = h('button', { class: 'lnf', 'aria-label': 'Suspect ' + (i + 1), html: faceSVG(f, 64), onclick: () => { if (pointerHandled) return; tap(i); } }); b.addEventListener('pointerdown', (ev) => startDrag(ev, i)); grid.append(b); return b; });
+  const tiles = P.faces.map((f, i) => {
+    const b = h('button', { class: 'lnf', 'aria-label': 'Suspect ' + (i + 1), html: faceSVG(f, 64) });
+    b.addEventListener('pointerdown', (ev) => startDrag(ev, i, b));
+    b.addEventListener('click', () => { if (b.dataset.dragged) { delete b.dataset.dragged; return; } tap(i); });
+    grid.append(b); return b;
+  });
   const rule = h('button', { 'aria-pressed': 'true', onclick: () => setMode('rule') }, 'Rule out \u2715'); const acc = h('button', { 'aria-pressed': 'false', onclick: () => setMode('accuse') }, 'Accuse \u261D');
   const note = h('div', { class: 'ln-note' }, '');
   const cta = h('button', { class: 'btn you block accuse-cta hide', onclick: () => { const q = LD.range(N).find((z) => !out.has(z)); if (q != null) accuse(q); } }, '\u261D  Only one left: accuse them!');
@@ -90,21 +95,18 @@ function mountLineup(root, ctx) {
     if (out.has(i)) { out.delete(i); draw(); return; }
     accuse(i);
   }
-  let pointerHandled = false;
   function isOverAccuse(x, y) { const el = document.elementFromPoint(x, y); return !!el && (el === acc || acc.contains(el)); }
-  function startDrag(ev, i) {
-    if (!ctx.active() || won || out.has(i)) return; const el = ev.currentTarget; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+  function startDrag(ev, i, el) {
+    if (!ctx.active() || won || out.has(i)) return; try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
     const sx = ev.clientX, sy = ev.clientY; let moved = false;
     const move_ = (e) => {
-      if (!moved && Math.hypot(e.clientX - sx, e.clientY - sy) < 6) return; moved = true;
+      if (!moved && Math.hypot(e.clientX - sx, e.clientY - sy) < 6) return; moved = true; el.dataset.dragged = '1';
       el.classList.add('dragging'); acc.classList.toggle('droptgt', isOverAccuse(e.clientX, e.clientY));
     };
     const up = (e) => {
       el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel);
       el.classList.remove('dragging'); acc.classList.remove('droptgt');
-      if (!moved) tap(i);
-      else if (isOverAccuse(e.clientX, e.clientY)) accuse(i);
-      pointerHandled = true; setTimeout(() => { pointerHandled = false; }, 0);
+      if (moved && isOverAccuse(e.clientX, e.clientY)) accuse(i);
     };
     const cancel = () => { el.removeEventListener('pointermove', move_); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel); el.classList.remove('dragging'); acc.classList.remove('droptgt'); };
     el.addEventListener('pointermove', move_); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', cancel);

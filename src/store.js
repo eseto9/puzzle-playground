@@ -53,10 +53,16 @@ async function initCaps() {
   App.board = new Map([[App.uid, App.rec]]);
   if (App.db && App.uid !== 'local') {
     try {
+      let seeded = false;
       App.db.collection('lb').onSnapshot((snap) => {
         const m = new Map(); snap.docs.forEach((d) => { const v = d.data(); if (v) m.set(d.id, v); });
         const mine = m.get(App.uid); const merged = mergeRec(App.rec, mine);
-        const changed = stable(merged) !== stable(mine ? mergeRec(null, mine) : {});
+        // when our own doc hasn't round-tripped back yet, every *other* player's retained
+        // message also arrives as a snapshot with no `mine` — only treat that as "changed"
+        // (and worth a republish) once, not on every one of those messages, or two clients
+        // publishing at the same time can keep re-triggering each other indefinitely
+        const changed = mine ? stable(merged) !== stable(mergeRec(null, mine)) : !seeded;
+        seeded = true;
         App.rec = merged; m.set(App.uid, App.rec); App.board = m; lsSet(App.rec);
         if (changed) saveRec(); else notify();
       }, (e) => { console.warn('board', e && e.code); });
